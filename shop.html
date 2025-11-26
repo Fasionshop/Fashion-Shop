@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Fasion - Shop</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
+  
+  <style>
+    /* --- (CSS ทั้งหมดเหมือนเดิม) --- */
+    :root { --primary: #7A56D3; --bg: #f5f5f5; --white: #ffffff; --text: #333; }
+    body { 
+      font-family: 'Mitr', sans-serif; background-color: var(--bg); 
+      margin: 0; padding-bottom: 70px; font-size: 16px; 
+      user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+    }
+    
+    /* --- (CSS ใหม่สำหรับประวัติการค้นหา) --- */
+    .search-bar {
+      position: relative; /* (1) ทำให้เป็น relative เพื่อให้ dropdown อยู่ถูกตำแหน่ง */
+    }
+    
+    #searchHistoryDropdown {
+      display: none; /* (2) ซ่อนไว้ก่อน */
+      position: absolute;
+      top: 110%; /* (3) อยู่ใต้ search bar */
+      left: 0;
+      width: 100%;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      z-index: 110; /* (4) ให้อยู่เหนือทุกอย่าง */
+      max-height: 250px;
+      overflow-y: auto;
+      border: 1px solid #eee;
+    }
+    
+    .history-item, .history-clear {
+      padding: 10px 15px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    
+    .history-item:hover {
+      background: #f9f9f9;
+    }
+    
+    .history-item .history-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .history-item .remove-history-btn {
+      font-size: 0.9rem;
+      color: #aaa;
+      cursor: pointer;
+      padding: 5px;
+    }
+    .history-item .remove-history-btn:hover {
+      color: #ff424f;
+    }
+
+    .history-clear {
+      text-align: center;
+      color: var(--primary);
+      font-weight: 600;
+      justify-content: center;
+    }
+    .history-clear:hover {
+      background: #F3F0FF;
+    }
+    /* --- (จบ CSS ใหม่) --- */
+    
+    header { background: linear-gradient(-180deg, #7A56D3, #5E42A6); padding: 15px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    /* .search-bar { flex-grow: 1; background: white; padding: 8px 15px; border-radius: 5px; display: flex; align-items: center; } (ย้ายไปรวมกับ CSS ใหม่) */
+    .search-bar { flex-grow: 1; background: white; padding: 8px 15px; border-radius: 5px; display: flex; align-items: center; }
+    .search-bar input { border: none; outline: none; width: 100%; margin-left: 10px; font-family: 'Mitr', sans-serif; font-size: 1rem; }
+    .icon-btn { color: white; font-size: 1.4rem; position: relative; cursor: pointer; display: flex; align-items: center; }
+    .cart-badge { position: absolute; top: -8px; right: -8px; background: #ffe13c; color: var(--primary); font-size: 0.7rem; padding: 2px 6px; border-radius: 50%; font-weight: bold; border: 1px solid var(--primary); }
+    .profile-menu { display: flex; align-items: center; gap: 8px; cursor: pointer; margin-left: 5px; color: white; }
+    .header-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: #eee; }
+    .header-name { font-size: 0.9rem; font-weight: 600; max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .category-bar { display: flex; overflow-x: auto; background: white; padding: 10px; gap: 15px; position: sticky; top: 60px; z-index: 90; }
+    .cat-item { white-space: nowrap; padding: 5px 15px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; color: #666; transition: 0.3s; }
+    .cat-item.active { border-color: var(--primary); color: var(--primary); background-color: #F3F0FF; font-weight: 600; }
+    .product-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; }
+    @media (max-width: 768px) { .product-container { grid-template-columns: repeat(2, 1fr); } }
+    
+    /* --- ⭐️ [START] CSS ใหม่: แก้ช่องค้นหาเล็กบนมือถือ --- */
+    @media (max-width: 600px) {
+      header {
+        padding: 10px 12px; /* (1) ลด padding ซ้าย-ขวา */
+        gap: 10px;         /* (2) ลดช่องว่างระหว่างไอคอน */
+      }
+      
+      /* (3) ซ่อนชื่อผู้ใช้ข้างๆ รูปโปรไฟล์ (ประหยัดที่ได้มาก) */
+      .header-name {
+        display: none;
+      }
+      
+      /* (4) ลดขนาดไอคอนเล็กน้อย */
+      .icon-btn {
+        font-size: 1.3rem; 
+      }
+      .profile-menu {
+         margin-left: 0; /* เอา margin ที่เคยกดปุ่ม login ออก */
+      }
+      
+      /* (5) ปรับช่องค้นหาให้ชิดขึ้น */
+      .search-bar {
+        padding: 8px 12px;
+      }
+      .search-bar input {
+        margin-left: 8px;
+      }
+    }
+    /* --- ⭐️ [END] CSS ใหม่ --- */
+    
+    .product-card { background: white; border-radius: 5px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: transform 0.2s; display: flex; flex-direction: column; animation: fadeIn 0.5s; position: relative; }
+    .product-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+    .p-img { width: 100%; aspect-ratio: 1 / 1; background-color: #ddd; object-fit: cover; }
+    .p-details { padding: 10px; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .p-name { font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 5px; }
+    .p-price { color: var(--primary); font-weight: bold; font-size: 1.1rem; }
+    .p-stock { font-size: 0.75rem; color: #888; margin-top: 5px; }
+    .p-btn { background: var(--primary); color: white; border: none; width: 100%; padding: 8px; margin-top: 10px; border-radius: 3px; cursor: pointer; font-family: 'Mitr'; }
+    .p-btn:disabled { background: #ccc; }
+    .fav-btn { position: absolute; top: 8px; right: 8px; width: 35px; height: 35px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #ccc; font-size: 1.2rem; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: 0.2s; border: none; z-index: 2; }
+    .fav-btn:hover { transform: scale(1.1); }
+    .fav-btn.active { color: #ff424f; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; }
+    .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.3s; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .confirm-modal-box { background: white; padding: 25px; border-radius: 10px; text-align: center; width: 90%; max-width: 350px; animation: popIn 0.3s; }
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .confirm-icon { font-size: 3rem; margin-bottom: 15px; display: block; }
+    .confirm-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #333; }
+    .confirm-desc { font-size: 0.95rem; color: #666; margin-bottom: 20px; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: center; }
+    .btn-confirm-action { flex: 1; padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-family: 'Mitr'; font-weight: 600; }
+    .btn-yes { background: var(--primary); color: white; }
+    .btn-no { background: #eee; color: #333; }
+    .btn-ok { background: #4CAF50; color: white; width: 100%; }
+    .cart-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 15px 0; }
+    
+    /* ⭐️⭐️ [เพิ่ม] CSS สำหรับรูปภาพในตะกร้า ⭐️⭐️ */
+    .cart-item-img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 5px;
+      margin-right: 15px;
+      background-color: #f0f0f0; /* สีพื้นหลังเผื่อรูปโหลดช้า */
+      flex-shrink: 0; /* ป้องกันไม่ให้รูปหดตัว */
+    }
+    
+    .cart-item-info { flex-grow: 1; }
+    .cart-item-controls { display: flex; align-items: center; gap: 10px; }
+    .mini-qty-box { display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; width: fit-content; }
+    .mini-qty-btn { width: 25px; height: 25px; border: none; background: #f8f8f8; cursor: pointer; color: #555; display: flex; align-items: center; justify-content: center; }
+    .mini-qty-btn:hover { background: #eee; }
+    .mini-qty-val { width: 30px; text-align: center; font-size: 1rem; font-weight: 600; }
+    .close-btn { float: right; font-size: 1.5rem; cursor: pointer; }
+    .checkout-btn { background: var(--primary); color: white; width: 100%; padding: 15px; border: none; font-size: 1.2rem; margin-top: 15px; border-radius: 5px; font-family: 'Mitr', sans-serif; font-weight: 600; }
+    .order-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #fff; }
+    .order-header { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; font-size: 0.95rem; color: #555; }
+    .order-status { font-weight: 600; color: var(--primary); }
+    .order-items { font-size: 0.95rem; color: #333; }
+    
+    /* ⭐️⭐️ [START] แก้ไข CSS .order-total ⭐️⭐️ */
+    .order-total { 
+      display: flex; /* 👈 [แก้ไข] */
+      justify-content: space-between; /* 👈 [แก้ไข] */
+      align-items: center; /* 👈 [แก้ไข] */
+      font-weight: 600; 
+      font-size: 1.2rem; 
+      color: var(--primary); 
+      margin-top: 10px; 
+    }
+    .order-total > span { /* 👈 [ใหม่] ให้ข้อความยอดรวมเล็กลงนิดหน่อย */
+      font-size: 1.1rem;
+    }
+    /* ⭐️⭐️ [END] แก้ไข CSS .order-total ⭐️⭐️ */
+
+    .item-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    
+    /* ⭐️⭐️ [START] CSS ใหม่สำหรับปุ่มยกเลิก/แก้ไข ⭐️⭐️ */
+    .order-total-actions { /* 👈 [ใหม่] */
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn-cancel-order {
+      background: #ff424f;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Mitr', sans-serif;
+      font-size: 0.9rem;
+      transition: 0.2s;
+      /* (ลบ display: block, margin-left: auto, margin-top: 10px) */
+      width: fit-content; 
+    }
+    .btn-cancel-order:hover { background: #d93025; }
+    .btn-cancel-order:disabled { background: #ccc; cursor: not-allowed; }
+    
+    .btn-edit-order { /* 👈 [ใหม่] */
+      background: #f0ad4e;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Mitr', sans-serif;
+      font-size: 0.9rem;
+      transition: 0.2s;
+    }
+    .btn-edit-order:hover { background: #df9e3c; }
+    .btn-edit-order:disabled { background: #ccc; }
+    /* ⭐️⭐️ [END] CSS ใหม่สำหรับปุ่มยกเลิก/แก้ไข ⭐️⭐️ */
+    
+    .chat-btn { position: fixed; bottom: 80px; right: 20px; background: var(--primary); color: white; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: grab; z-index: 1000; font-size: 24px; }
+    .chat-window { display: none; position: fixed; bottom: 150px; right: 20px; width: 300px; height: 400px; background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); border-radius: 10px; flex-direction: column; z-index: 1000; overflow: hidden; font-family: 'Mitr'; }
+    .chat-header { background: var(--primary); color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: grab; }
+    .chat-body { flex: 1; padding: 10px; overflow-y: auto; background: #f9f9f9; display: flex; flex-direction: column; gap: 10px; }
+    .chat-input-area { padding: 10px; border-top: 1px solid #ddd; display: flex; }
+    .chat-input-area input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-family: 'Mitr'; }
+    .chat-input-area button { background: var(--primary); color: white; border: none; padding: 8px 15px; margin-left: 5px; border-radius: 20px; cursor: pointer; font-family: 'Mitr'; }
+    .msg { padding: 8px 12px; border-radius: 15px; max-width: 80%; font-size: 1rem; }
+    .msg-user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg-admin { background: #e0e0e0; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
+    #toast { visibility: hidden; min-width: 200px; background-color: rgba(0, 0, 0, 0.8); color: #fff; text-align: center; border-radius: 50px; padding: 16px; position: fixed; z-index: 2000; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 1rem; opacity: 0; transition: opacity 0.3s, visibility 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    #toast.show { visibility: visible; opacity: 1; }
+    #toast.error { background-color: rgba(220, 53, 69, 0.9); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color:#555; }
+    .form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-family: 'Mitr', sans-serif; font-size: 1rem; }
+    .payment-options label { display: block; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px; cursor: pointer; display:flex; align-items:center; gap:10px; }
+    .payment-options input:checked + span { color: var(--primary); font-weight: 600; }
+    #bankDetails { display: none; background: #f9f9f9; padding: 15px; border-radius: 5px; border: 1px solid #eee; margin-top: 10px; animation: fadeIn 0.3s; }
+    .bank-select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ddd; font-family: 'Mitr'; }
+    #qrCodeContainer { text-align: center; margin-top: 10px; display: none; }
+    #qrCodeContainer img { width: 200px; border: 1px solid #ddd; border-radius: 10px; }
+    .bank-info { font-size: 1rem; color: #555; text-align: center; margin-top: 5px; }
+    .qty-selector { display: flex; align-items: center; justify-content: center; margin: 20px 0; }
+    .qty-btn { width: 40px; height: 40px; border: 1px solid #ddd; background: white; font-size: 1.2rem; cursor: pointer; color: #555; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+    .qty-display { width: 60px; text-align: center; font-size: 1.2rem; font-weight: 600; border: none; font-family: 'Mitr'; }
+    .modal-product-img { width: 100px; height: 100px; object-fit: cover; border-radius: 5px; margin-right: 15px; }
+    .modal-product-info { display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .fav-item-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .empty-fav { grid-column: span 2; text-align: center; color: #999; padding: 20px; }
+    .profile-header-edit { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+    
+    /* ⭐️⭐️ [START] แก้ไข CSS รูปโปรไฟล์ ⭐️⭐️ */
+    .profile-img-large { 
+      width: 130px; /* 👈 ขยายจาก 100px */
+      height: 130px; /* 👈 ขยายจาก 100px */
+      border-radius: 50%; 
+      object-fit: cover; 
+      border: 3px solid #eee; 
+      margin-bottom: 15px; /* 👈 เพิ่มระยะห่างจาก 10px */
+    }
+    /* ⭐️⭐️ [END] แก้ไข CSS รูปโปรไฟล์ ⭐️⭐️ */
+    
+    .upload-label { cursor: pointer; color: var(--primary); font-size: 0.9rem; display: flex; align-items: center; gap: 5px; background: #F3F0FF; padding: 5px 15px; border-radius: 20px; transition: 0.2s; }
+    .upload-label:hover { background: #E9E4FF; }
+    .logout-btn { width: 100%; background: #eee; color: #333; margin-top: 10px; font-family: 'Mitr'; font-weight:600; }
+    .size-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+    .size-btn { padding: 8px 12px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; background: white; font-family: 'Mitr'; }
+    .size-btn.active { border-color: var(--primary); background: #F3F0FF; color: var(--primary); font-weight: 600; }
+    
+    /* (1) CSS: เพิ่มสไตล์สำหรับปุ่มที่ 'หมด' */
+    .size-btn:disabled { 
+      background: #f9f9f9; color: #ccc; cursor: not-allowed; 
+      text-decoration: line-through; /* ขีดฆ่า */
+    }
+
+    /* --- (CSS ใหม่สำหรับปุ่มตัวเลือก) --- */
+    .msg-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    /* ทำให้ปุ่มในแชทแอดมินดูโปร่งแสงเล็กน้อย */
+    .msg-admin .msg-options {
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 10px;
+    }
+    .option-btn {
+      background: #F3F0FF;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 8px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'Mitr', sans-serif;
+      font-weight: 500;
+      text-align: center;
+      transition: 0.2s;
+    }
+    .option-btn:hover {
+      background: #E9E4FF;
+      transform: scale(1.02);
+    }
+    /* สไตล์สำหรับข้อความที่บอกว่า "เลือกแล้ว" */
+    .option-btn-selected {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin: 0;
+      padding-top: 5px;
+      text-align: center;
+      font-style: italic;
+    }
+
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="search-bar" id="searchBarContainer">
+      <i class="fas fa-search" style="color: #666;"></i>
+      
+      <input type="text" id="searchInput" placeholder="ค้นหาสินค้า..." 
+             onkeyup="handleSearchKey(event)" 
+             onfocus="showHistory()">
+             
+      <div id="searchHistoryDropdown"></div>
+    </div>
+    
+    <div class="icon-btn" onclick="openFav()" title="รายการที่ชอบ"><i class="fas fa-heart"></i></div>
+    <div class="icon-btn" onclick="openHistory()" title="ประวัติการสั่งซื้อ"><i class="fas fa-history"></i></div>
+    <div class="icon-btn" onclick="openCart()" title="ตะกร้าสินค้า"><i class="fas fa-shopping-cart"></i><span class="cart-badge" id="cartCount">0</span></div>
+    <div id="authContainer">
+       <div id="loginBtn" onclick="window.location.href='index.html'" style="margin-left:5px; color:white; font-size:1rem; cursor:pointer; white-space: nowrap; display:none;">
+         <i class="fas fa-user-circle"></i> Login
+       </div>
+       <div id="userProfileBtn" class="profile-menu" onclick="openProfileModal()" style="display:none;">
+         <img src="https://via.placeholder.com/50" class="header-avatar" id="headerAvatar">
+         <span class="header-name" id="headerName">User</span>
+       </div>
+    </div>
+  </header>
+
+  <div class="category-bar" id="categoryBar">
+    <div class="cat-item active" onclick="filterCategory('ทั้งหมด', this)">ทั้งหมด</div>
+    <div class="cat-item" onclick="filterCategory('เสื้อผ้าแฟชั่น', this)">เสื้อผ้า ผช./ผญ.</div>
+    <div class="cat-item" onclick="filterCategory('กางเกง', this)">กางเกง ผช./ผญ.</div>
+    <div class="cat-item" onclick="filterCategory('เสื้อฮู้ด', this)">เสื้อฮู้ด</div>
+    <div class="cat-item" onclick="filterCategory('เครื่องประดับ', this)">เครื่องประดับ</div>
+    <div class="cat-item" onclick="filterCategory('หมวก', this)">หมวก</div>
+    <div class="cat-item" onclick="filterCategory('รองเท้า', this)">รองเท้า</div>
+  </div>
+
+  <div id="toast"><i class="fas fa-check-circle"></i> <span>ข้อความแจ้งเตือน</span></div>
+  <div class="product-container" id="productList"><p style="width:100%; text-align:center;">กำลังโหลดสินค้า...</p></div>
+
+  <div id="profileModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('profileModal')">&times;</span>
+      <h2>👤 แก้ไขโปรไฟล์</h2>
+      
+      <div class="profile-header-edit" style="gap: 10px;">
+        <img src="https://via.placeholder.com/130" class="profile-img-large" id="editAvatarPreview"> <label for="takePhotoInput" class="upload-label">
+          <i class="fas fa-camera"></i> ถ่ายรูปใหม่
+        </label>
+        
+        <label for="uploadPhotoInput" class="upload-label" style="background: #f1f1f1; color: #333; border: 1px solid #ddd;">
+          <i class="fas fa-images"></i> เลือกจากอัลบั้ม
+        </label>
+
+        <input type="file" id="takePhotoInput" accept="image/*" capture="user" style="display:none;" onchange="previewImage(event)">
+        
+        <input type="file" id="uploadPhotoInput" accept="image/*" style="display:none;" onchange="previewImage(event)">
+      </div>
+      <div class="form-group">
+        <label>อีเมล</label>
+        <input type="text" id="editEmail" class="form-control" disabled style="background:#f9f9f9; color:#888;">
+      </div>
+      <div class="form-group">
+        <label>ชื่อที่แสดง (ชื่อเล่น)</label>
+        <input type="text" id="editName" class="form-control" placeholder="ตั้งชื่อของคุณ...">
+      </div>
+      <button id="saveProfileBtn" class="checkout-btn" onclick="saveProfile()">บันทึกการเปลี่ยนแปลง</button>
+      <button class="checkout-btn logout-btn" onclick="closeModal('profileModal'); openLogoutConfirm()">ออกจากระบบ</button>
+    </div>
+  </div>
+
+  <div id="qtyModal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+      <span class="close-btn" onclick="closeModal('qtyModal')">&times;</span>
+      <h3 style="margin-top:0;">เลือกไซส์และจำนวน</h3>
+      <div class="modal-product-info">
+        <img id="qtyImg" class="modal-product-img" src="">
+        <div>
+          <div id="qtyName" style="font-weight:bold; margin-bottom:5px;"></div>
+          <div id="qtyPrice" style="color:var(--primary);"></div>
+          <div id="qtyTotalStock" style="font-size:0.9rem; color:#888;"></div>
+        </div>
+      </div>
+      
+      <label style="font-weight: 600; margin-bottom: 10px; display: block; color: #555;">เลือกไซส์:</label>
+      <div id="sizeSelector" class="size-selector">
+        </div>
+      
+      <label style="font-weight: 600; margin-bottom: 10px; display: block; color: #555;">เลือกจำนวน:</label>
+      <div class="qty-selector" style="margin-top:0;">
+        <button class="qty-btn" onclick="changeQty(-1)"><i class="fas fa-minus"></i></button>
+        <input type="text" id="qtyDisplay" class="qty-display" value="1" readonly>
+        <button class="qty-btn" onclick="changeQty(1)"><i class="fas fa-plus"></i></button>
+      </div>
+      
+      <button class="checkout-btn" onclick="submitToCart()">ยืนยันใส่ตะกร้า</button>
+    </div>
+  </div>
+
+  <div id="cartModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('cartModal')">&times;</span>
+      <h2>🛒 ตระกร้าสินค้า</h2>
+      <div id="cartItemsContainer"><p>ยังไม่มีสินค้าในตระกร้า</p></div>
+      <div class="coupon-box" style="margin-top: 15px; display:flex; gap:10px;">
+        <input type="text" id="couponInput" class="form-control" placeholder="กรอกโค้ดส่วนลด" style="margin:0; font-family:'Mitr';">
+        <button id="couponBtn" onclick="applyCoupon()" style="width:auto; padding: 0 20px; font-size: 1rem; margin:0; font-family:'Mitr';">ใช้โค้ด</button>
+      </div>
+      <div style="margin-top: 20px; border-top: 2px dashed #ddd; padding-top:10px; font-size:1rem; display:flex; flex-direction:column; gap: 5px;">
+        <div style="display:flex; justify-content:space-between;">
+          <span>ยอดรวม (Subtotal)</span>
+          <span id="subTotalPrice">฿0</span>
+        </div>
+        <div id="discountDisplay" style="display:flex; justify-content:space-between; color:green; display:none;">
+          <span>ส่วนลด (<span id="couponCodeDisplay"></span>)</span>
+          <span id="discountAmount"></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:1.2rem; font-weight:600; margin-top:5px;">
+          <span>ยอดรวมทั้งหมด</span>
+          <span id="totalPrice" style="color:var(--primary)">฿0</span>
+        </div>
+      </div>
+      <button class="checkout-btn" onclick="openPayment()">ดำเนินการชำระเงิน</button>
+    </div>
+  </div>
+  
+  <div id="paymentModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('paymentModal')">&times;</span>
+      <h2>📦 ข้อมูลจัดส่งและการชำระเงิน</h2>
+      <div style="margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed #ddd;">
+        <h3 style="font-size:1.1rem; color:var(--primary);">1. ที่อยู่จัดส่ง</h3> <div class="form-group"><input type="text" id="custName" class="form-control" placeholder="ชื่อ-นามสกุล ผู้รับ"></div>
+        <div class="form-group"><input type="tel" id="custPhone" class="form-control" placeholder="เบอร์โทรศัพท์"></div>
+        <div class="form-group"><textarea id="custAddress" class="form-control" rows="3" placeholder="ที่อยู่จัดส่ง..."></textarea></div>
+      </div>
+      <div>
+        <h3 style="font-size:1.1rem; color:var(--primary);">2. วิธีชำระเงิน</h3> <div class="payment-options">
+          <label onclick="toggleBank(false)"><input type="radio" name="payment" value="cod" checked> <span><i class="fas fa-truck"></i> เก็บเงินปลายทาง (COD)</span></label>
+          <label onclick="toggleBank(true)"><input type="radio" name="payment" value="bank"> <span><i class="fas fa-university"></i> โอนผ่านธนาคาร / QR</span></label>
+          <div id="bankDetails">
+             <p style="font-size:0.95rem; margin-bottom:5px;">เลือกธนาคาร:</p>
+             <select id="bankSelect" class="bank-select" onchange="showQR()">
+               <option value="">-- เลือก --</option>
+               <option value="kbank">กสิกรไทย (KBANK)</option>
+               <option value="scb">ไทยพาณิชย์ (SCB)</option>
+               <option value="promptpay">พร้อมเพย์</option>
+             </select>
+             <div id="qrCodeContainer">
+               <img id="qrImage" src="" alt="QR Code">
+               <div class="bank-info" id="bankInfoText"></div>
+               <div style="color:red; font-size:0.9rem; margin-top:5px;">*แนบสลิปในแชทหลังสั่งซื้อ</div>
+             </div>
+          </div>
+        </div>
+      </div>
+      <button class="checkout-btn" id="confirmPayBtn" onclick="confirmOrder()">ยืนยันการสั่งซื้อ</button>
+    </div>
+  </div>
+
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('historyModal')">&times;</span>
+      <h2>🕒 ประวัติการสั่งซื้อ</h2>
+      <div id="historyContainer" style="margin-top:20px;"><p style="text-align:center;">กำลังโหลด...</p></div>
+    </div>
+  </div>
+
+  <div id="favModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('favModal')">&times;</span>
+      <h2>❤️ รายการที่ชอบ</h2>
+      <div id="favContainer" class="fav-item-grid" style="margin-top:20px;"></div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal" style="align-items: center;">
+    <div class="confirm-modal-box">
+      <div id="confirmIcon" class="confirm-icon">❓</div>
+      <div id="confirmTitle" class="confirm-title">ยืนยัน?</div>
+      <div id="confirmDesc" class="confirm-desc">ข้อความ...</div>
+      <div class="confirm-actions">
+        <button class="btn-confirm-action btn-no" onclick="closeModal('confirmModal')">ยกเลิก</button>
+        <button class="btn-confirm-action btn-yes" id="btnConfirmAction">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="successModal" class="modal" style="align-items: center;">
+    <div class="confirm-modal-box">
+      <div class="confirm-icon" style="color:#4CAF50;"><i class="fas fa-check-circle"></i></div>
+      <div class="confirm-title">สั่งซื้อสำเร็จ!</div>
+      <div class="confirm-desc">ขอบคุณที่ใช้บริการ ทางเราจะจัดส่งสินค้าให้เร็วที่สุด</div>
+      <div class="confirm-actions">
+        <button class="btn-confirm-action btn-ok" onclick="closeModal('successModal')">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="editAddressModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal('editAddressModal')">&times;</span>
+      <h2>✏️ แก้ไขที่อยู่จัดส่ง</h2>
+      <p style="font-size:0.9rem; color:#888; margin-top:-10px; margin-bottom:20px;">เฉพาะออเดอร์ที่ยัง "รอจัดส่ง"</p>
+      <div class="form-group">
+        <label>ชื่อ-นามสกุล ผู้รับ</label>
+        <input type="text" id="editCustName" class="form-control" placeholder="ชื่อ-นามสกุล ผู้รับ">
+      </div>
+      <div class="form-group">
+        <label>เบอร์โทรศัพท์</label>
+        <input type="tel" id="editCustPhone" class="form-control" placeholder="เบอร์โทรศัพท์">
+      </div>
+      <div class="form-group">
+        <label>ที่อยู่จัดส่ง</label>
+        <textarea id="editCustAddress" class="form-control" rows="3" placeholder="ที่อยู่จัดส่ง..."></textarea>
+      </div>
+      <button id="saveAddressBtn" class="checkout-btn" onclick="saveAddress()">บันทึกการเปลี่ยนแปลง</button>
+    </div>
+  </div>
+  <div class="chat-btn" id="chatBtn"><i class="fas fa-comments"></i></div>
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-header"><span>💬 สอบถามร้านค้า</span><span style="cursor:pointer" onclick="toggleChat()">&times;</span></div>
+    <div class="chat-body" id="chatBody"><div class="msg msg-admin">สวัสดีครับ! มีอะไรให้ช่วยไหมครับ?</div></div>
+    <div class="chat-input-area">
+      <input type="text" id="msgInput" placeholder="พิมพ์ข้อความ..." onkeypress="handleEnter(event)">
+      <button onclick="sendMsg()">ส่ง</button>
+    </div>
+  </div>
+  
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-storage-compat.js"></script> <script>
+    // --- (Firebase Config เหมือนเดิม) ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyA7lELq82KxJ0sFDf6jKmWPDFKpKqHJp0c",
+      authDomain: "king007-c72e2.firebaseapp.com",
+      projectId: "king007-c72e2",
+      storageBucket: "king007-c72e2.firebasestorage.app",
+      messagingSenderId: "136587774092",
+      appId: "1:136587774092:web:4ee67ff03cdee67bb393a9",
+      measurementId: "G-K39CYF7766"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const storage = firebase.storage(); // 👈 [2] สร้างตัวแปร storage
+
+    // --- ⛔ ป้องกันการคัดลอก (เหมือนเดิม) ⛔ ---
+    document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
+    document.addEventListener('copy', (e) => {
+      e.preventDefault();
+      showToast('ไม่อนุญาตให้คัดลอกเนื้อหา', true); 
+    });
+    // --- ⛔ --------------------------- ⛔ ---
+
+    // (3) JS: เพิ่มตัวแปรสำหรับสต็อกของไซส์ที่เลือก
+    let allProducts=[], cart=[], userFavorites=[];
+    
+    // (1) ⭐️ [ใหม่] เพิ่มตัวแปรสำหรับประวัติการค้นหา
+    let searchHistory = [];
+    const MAX_HISTORY = 7; // จำกัดประวัติไว้ 7 รายการ
+    const HISTORY_KEY = 'shop_searchHistory'; // ชื่อ key ใน localStorage
+    
+    let currentSelectedId=null, currentQty=1, currentSelectedSize=null;
+    let currentSelectedSizeStock = null; // 👈 เพิ่มตัวแปรนี้
+    
+    // ⭐️⭐️ [START] เพิ่มตัวแปรเก็บไฟล์รูป ⭐️⭐️
+    let currentAvatarFile = null; // 👈 [3] เพิ่มตัวแปรนี้เพื่อเก็บ "ไฟล์"
+    // ⭐️⭐️ [END] เพิ่มตัวแปร ⭐️⭐️
+    
+    // (ตัวแปรส่วนลด เหมือนเดิม)
+    let subtotalAmount = 0;
+    let discountApplied = 0;
+    let finalTotalAmount = 0;
+    let currentDiscount = { code: null, type: null, value: 0 };
+    
+    // ⭐️⭐️ [ใหม่] เพิ่มตัวแปรเก็บ ID ออเดอร์ที่กำลังแก้ไข ⭐️⭐️
+    let currentEditingOrderId = null; 
+    
+    let userId = localStorage.getItem('shop_userId');
+    if (!userId) { userId = 'guest_' + Math.random().toString(36).substr(2, 9); localStorage.setItem('shop_userId', userId); }
+    
+    // 🔥 [NEW] ย้าย currentUserData มาเป็น Global
+    let currentUserData = {};
+
+    // 🔥 --- [START] เพิ่มตัวแปรสำหรับ Timer 30 นาที --- 🔥
+    let inactivityTimer = null; 
+    // 30 นาที = 30 * 60 วินาที * 1000 มิลลิวินาที = 1,800,000
+    const INACTIVITY_TIMEOUT_MS = 1800000; 
+    // (สำหรับทดสอบ: 10 วินาที = 10000)
+    // const INACTIVITY_TIMEOUT_MS = 10000; 
+    // 🔥 --- [END] เพิ่มตัวแปร --- 🔥
+
+
+    window.onload = async () => {
+    
+      // (2) ⭐️ [ใหม่] โหลดประวัติการค้นหาเมื่อหน้าเว็บโหลด
+      loadSearchHistory(); 
+      
+      // (3) ⭐️ [ใหม่] เพิ่ม event listener เพื่อซ่อน dropdown เมื่อคลิกที่อื่น
+      document.addEventListener('click', (e) => {
+        const container = document.getElementById('searchBarContainer');
+        if (container && !container.contains(e.target)) {
+          hideHistory();
+        }
+      });
+      
+      auth.onAuthStateChanged(async user => {
+        if (user) {
+          userId = user.uid;
+          document.getElementById('loginBtn').style.display = 'none';
+          document.getElementById('userProfileBtn').style.display = 'flex';
+          listenToChat();
+          listenToChatStatus(); // 🔥 [NEW] เรียกฟังก์ชันดักฟังสถานะบล็อค
+          loadFavorites();
+          await loadUserProfile(user); 
+        } else {
+          // 🔥 [NEW] ถ้าไม่ได้ login ให้ตั้งค่า currentUserData เป็น Guest
+          currentUserData = {
+            displayName: 'Guest',
+            photoURL: null,
+            email: 'guest@example.com'
+          };
+          document.getElementById('loginBtn').style.display = 'block';
+          document.getElementById('userProfileBtn').style.display = 'none';
+          listenToChat();
+          listenToChatStatus(); // 🔥 [NEW] เรียกฟังก์ชันดักฟังสถานะบล็อค (สำหรับ Guest)
+        }
+      });
+      await checkAndSeedData(); // 👈 (4) JS: แก้ไขฟังก์ชันนี้
+      loadProductsFromDB();
+      
+      // --- ระบบลากแชท (เหมือนเดิม) ---
+      const chatWindow = document.getElementById('chatWindow');
+      const chatHeader = chatWindow.querySelector('.chat-header');
+      const chatButton = document.getElementById('chatBtn');
+      makeDraggable(chatWindow, chatHeader, null);
+      makeDraggable(chatButton, chatButton, toggleChat);
+    function makeDraggable(element, handle, onClickCallback) {
+      let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+      let dragged = false; 
+      handle.onmousedown = dragStart;
+      handle.ontouchstart = dragStart;
+      function dragStart(e) {
+        e = e || window.event;
+        dragged = false; 
+        if (e.type === 'touchstart') {
+          pos3 = e.touches[0].clientX;
+          pos4 = e.touches[0].clientY;
+        } else {
+          e.preventDefault(); 
+          pos3 = e.clientX;
+          pos4 = e.clientY;
+        }
+        if (element.style.top === "" || element.style.left === "") {
+          const rect = element.getBoundingClientRect();
+          element.style.top = rect.top + 'px';
+          element.style.left = rect.left + 'px';
+          element.style.bottom = 'auto'; element.style.right = 'auto';
+        }
+        document.onmouseup = dragEnd;
+        document.ontouchend = dragEnd;
+        document.onmousemove = elementDrag;
+        document.ontouchmove = elementDrag;
+        handle.style.cursor = 'grabbing'; 
+      }
+      function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault(); 
+        let clientX, clientY;
+        if (e.type === 'touchmove') {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+        dragged = true; 
+        pos1 = pos3 - clientX;
+        pos2 = pos4 - clientY;
+        pos3 = clientX;
+        pos4 = clientY;
+        let newTop = element.offsetTop - pos2;
+        let newLeft = element.offsetLeft - pos1;
+        if (newTop < 0) newTop = 0;
+        if (newLeft < 0) newLeft = 0;
+        if (newTop + element.clientHeight > window.innerHeight) newTop = window.innerHeight - element.clientHeight;
+        if (newLeft + element.clientWidth > window.innerWidth) newLeft = window.innerWidth - element.clientWidth;
+        element.style.top = newTop + "px";
+        element.style.left = newLeft + "px";
+      }
+      function dragEnd() {
+        document.onmouseup = null; 
+        document.ontouchend = null;
+        document.onmousemove = null; 
+        document.ontouchmove = null;
+        handle.style.cursor = 'grab'; 
+        if (!dragged && onClickCallback) { 
+          onClickCallback(); 
+        }
+      }
+    }
+    // --- (จบฟังก์ชันลาก) ---
+    };
+    
+    // --- ฟังก์ชันโปรไฟล์ (เหมือนเดิม) ---
+    // (ย้าย let currentUserData = {}; ไปเป็น Global)
+    async function loadUserProfile(user) {
+      const doc = await db.collection('users').doc(user.uid).get();
+      if (doc.exists) { currentUserData = doc.data(); } 
+      else {
+        currentUserData = {
+          displayName: user.displayName || user.email.split('@')[0],
+          photoURL: user.photoURL || 'https://via.placeholder.com/150?text=User',
+          email: user.email
+        };
+      }
+      updateProfileUI();
+    }
+    function updateProfileUI() {
+      document.getElementById('headerName').innerText = currentUserData.displayName;
+      document.getElementById('headerAvatar').src = currentUserData.photoURL;
+      document.getElementById('editName').value = currentUserData.displayName;
+      document.getElementById('editEmail').value = currentUserData.email;
+      document.getElementById('editAvatarPreview').src = currentUserData.photoURL;
+      document.getElementById('custName').value = currentUserData.displayName;
+    }
+    function openProfileModal() { 
+      currentAvatarFile = null; // 👈 รีเซ็ตไฟล์ที่เลือก ทุกครั้งที่เปิด modal
+      document.getElementById('profileModal').style.display = 'flex'; 
+    }
+    
+    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน previewImage ⭐️⭐️
+    function previewImage(event) {
+      const file = event.target.files[0];
+      if (file) {
+        
+        // 👈 [4] เก็บ "ไฟล์" ไว้ในตัวแปร
+        currentAvatarFile = file; 
+        
+        // (ส่วนนี้เหมือนเดิม: แค่สร้างตัวอย่าง Base64)
+        const reader = new FileReader();
+        reader.onload = function(e) { document.getElementById('editAvatarPreview').src = e.target.result; };
+        reader.readAsDataURL(file);
+      }
+    }
+    // ⭐️⭐️ [END] แก้ไขฟังก์ชัน previewImage ⭐️⭐️
+    
+    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน saveProfile ⭐️⭐️
+    async function saveProfile() {
+      const btn = document.getElementById('saveProfileBtn');
+      btn.disabled = true;
+      
+      const newName = document.getElementById('editName').value.trim();
+      let newImgSrc = document.getElementById('editAvatarPreview').src; // 👈 (1) เอา URL/Base64 ปัจจุบันมา
+      
+      if(!newName) {
+        showToast('กรุณากรอกชื่อ', true);
+        btn.disabled = false;
+        return;
+      }
+
+      try {
+        // (2) ตรวจสอบว่ามีการเลือก "ไฟล์ใหม่" หรือไม่ (จากตัวแปรที่เราเก็บไว้)
+        if (currentAvatarFile) {
+          btn.innerText = "กำลังอัปโหลดรูป...";
+          
+          // (3) สร้าง "ที่อยู่" ใน Storage (เช่น avatars/USER_ID/filename.jpg)
+          const filePath = `avatars/${userId}/${currentAvatarFile.name}`;
+          const fileRef = storage.ref().child(filePath);
+          
+          // (4) สั่งอัปโหลด "ไฟล์"
+          await fileRef.put(currentAvatarFile);
+          
+          // (5) ถ้าอัปโหลดสำเร็จ ให้ไปเอา "ลิงก์" (Download URL)
+          newImgSrc = await fileRef.getDownloadURL();
+          
+          currentAvatarFile = null; // 👈 เคลียร์ไฟล์หลังจากอัปโหลดสำเร็จ
+        }
+
+        // (6) บันทึกข้อมูลลง Firestore (ไม่ว่าจะเป็นลิงก์ใหม่ หรือ ลิงก์เดิม)
+        btn.innerText = "กำลังบันทึก...";
+        await db.collection('users').doc(userId).set({
+          displayName: newName,
+          photoURL: newImgSrc, // 👈 บันทึกลิงก์ (ไม่ใช่ Base64)
+          email: currentUserData.email
+        }, { merge: true });
+
+        // (7) อัปเดต UI (เหมือนเดิม)
+        currentUserData.displayName = newName;
+        currentUserData.photoURL = newImgSrc;
+        updateProfileUI();
+        showToast('บันทึกข้อมูลเรียบร้อย');
+        closeModal('profileModal');
+        
+      } catch(e) { 
+        console.error(e); 
+        showToast('บันทึกไม่สำเร็จ: ' + e.message, true); 
+      } finally { 
+        btn.disabled = false;
+        btn.innerText = "บันทึกการเปลี่ยนแปลง";
+      }
+    }
+    // ⭐️⭐️ [END] แก้ไขฟังก์ชัน saveProfile ⭐️⭐️
+    
+    // 🔥 --- [START] แก้ไขฟังก์ชัน openLogoutConfirm --- 🔥
+    function openLogoutConfirm() {
+      document.getElementById('confirmIcon').innerHTML = '🚪';
+      document.getElementById('confirmTitle').innerText = 'ออกจากระบบ?';
+      document.getElementById('confirmDesc').innerText = 'คุณต้องการออกจากระบบใช่หรือไม่';
+      const btnConfirm = document.getElementById('btnConfirmAction');
+      btnConfirm.innerText = 'ออกจากระบบ';
+      
+      // (1) เปลี่ยนเป็น async function
+      btnConfirm.onclick = async () => {
+        try {
+          // (2) ตรวจสอบว่าผู้ใช้ที่ login อยู่ (ไม่ใช่ guest)
+          // ID ของ Guest จะขึ้นต้นด้วย 'guest_'
+          if (userId && !userId.startsWith('guest_')) {
+            // (3) อัปเดต field 'welcomeSent' เป็น false
+            // เพื่อให้ครั้งหน้าพอกลับมา login ใหม่ บอทจะทักทายอีกครั้ง
+            await db.collection('chats').doc(userId).set({
+              welcomeSent: false
+            }, { merge: true });
+          }
+          
+          // (4) สั่ง Logout
+          await auth.signOut();
+          
+          // (5) ลบ Guest ID (ถ้ามี) และ Redirect
+          localStorage.removeItem('shop_userId');
+          window.location.href = 'index.html';
+          
+        } catch (err) {
+          console.error("Error during logout:", err);
+          // หากเกิดข้อผิดพลาด ก็ยังพยายาม log out และ redirect
+          auth.signOut(); 
+          localStorage.removeItem('shop_userId');
+          window.location.href = 'index.html';
+        }
+      };
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+    // 🔥 --- [END] แก้ไขฟังก์ชัน openLogoutConfirm --- 🔥
+
+
+    // --- (4) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันสร้างสินค้า (checkAndSeedData) ⭐️⭐️ ---
+    async function checkAndSeedData() {
+      const s = await db.collection('products').limit(1).get();
+      if(s.empty) {
+        console.log("ฐานข้อมูลว่าง กำลังเพิ่มสินค้าตัวอย่าง (เวอร์ชันสต็อกตามไซส์)...");
+        const b = db.batch();
+        
+        const categories = [
+          'เสื้อผ้าแฟชั่น', 'กางเกง', 'เสื้อฮู้ด', 
+          'เครื่องประดับ', 'หมวก', 'รองเท้า'
+        ]; 
+        
+        // (4.1) JS: สร้างฟังก์ชัน helper สำหรับสร้างสต็อก
+        function generateStock(sizes) {
+          let sizeStock = {};
+          let totalStock = 0;
+          
+          // กำหนดสต็อกสุ่ม (5-20 ชิ้น) ให้แต่ละไซส์
+          sizes.forEach(size => {
+            const s = Math.floor(Math.random() * 16) + 5; // สุ่ม 5-20
+            sizeStock[size] = s;
+            totalStock += s;
+          });
+          
+          // สุ่มให้ 1 ไซส์หมด (เพื่อทดสอบ)
+          if (sizes.length > 1) {
+            const zeroIndex = Math.floor(Math.random() * sizes.length);
+            const sizeToZero = sizes[zeroIndex];
+            totalStock -= sizeStock[sizeToZero]; // ลบสต็อกที่เคยบวกไป
+            sizeStock[sizeToZero] = 0; // ตั้งค่าเป็น 0
+          }
+          
+          return { sizeStock, totalStock };
+        }
+
+        for (const c of categories) {
+          let keyword = 'item'; 
+          let sizes = ['One Size']; // ค่าเริ่มต้น
+          let count = 20;
+
+          if (c === 'เสื้อผ้าแฟชั่น') {
+            keyword = 'shirt';
+            sizes = ['S (อก 36")', 'M (อก 40")', 'L (อก 44")', 'XL (อก 48")'];
+          } else if (c === 'กางเกง') {
+            keyword = 'jeans';
+            sizes = ['28', '30', '32', '34', '36'];
+          } else if (c === 'เสื้อฮู้ด') {
+            keyword = 'hoodie';
+            sizes = ['S (อก 36")', 'M (อก 40")', 'L (อก 44")', 'XL (อก 48")'];
+          } else if (c === 'เครื่องประดับ') {
+            keyword = 'jewelry';
+            sizes = ['Free Size'];
+          } else if (c === 'หมวก') {
+            keyword = 'hat';
+            sizes = ['Free Size']; 
+            count = 10;
+          } else if (c === 'รองเท้า') {
+            keyword = 'shoe';
+            sizes = ['39', '40', '41', '42', '43'];
+            count = 10;
+          }
+
+          // (4.2) JS: สร้างสต็อกสำหรับสินค้าแต่ละชิ้น
+          for(let i=1; i<=count; i++) {
+            
+            // สร้าง stock object
+            const { sizeStock, totalStock } = generateStock(sizes);
+
+            b.set(db.collection('products').doc(), {
+              name: `${c} ${i}`, 
+              price: Math.floor(Math.random()*500)+100, 
+              // stock: 20, (ลบอันเก่า)
+              // sizes: sizes, (ลบอันเก่า)
+              sizeStock: sizeStock,   // 👈 (เพิ่มอันใหม่)
+              totalStock: totalStock, // 👈 (เพิ่มอันใหม่)
+              category: c, 
+              image: `https://source.unsplash.com/300x300/?${keyword}&sig=${i}`, 
+              sold: 0
+            });
+          }
+        }
+        await b.commit();
+        console.log("เพิ่มสินค้าตัวอย่าง (v.สต็อกตามไซส์) เรียบร้อย!");
+      }
+    }
+    // --- (4) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันสร้างสินค้า ⭐️⭐️ ---
+    
+
+    // --- (5) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันแสดงสินค้า (renderProducts) ⭐️⭐️ ---
+    function loadProductsFromDB() { db.collection('products').onSnapshot(s => { allProducts=[]; s.forEach(d=>allProducts.push({id:d.id,...d.data()})); renderProducts(allProducts); }); }
+    
+    function renderProducts(p) {
+      const c = document.getElementById('productList'); c.innerHTML='';
+      if(p.length === 0) {
+        c.innerHTML = '<p style="width:100%; text-align:center; color:#999;">ไม่พบสินค้าที่ค้นหา</p>';
+        return;
+      }
+      p.forEach(x => {
+        // (5.1) JS: เปลี่ยนมาเช็ก totalStock แทน stock
+        const isOut = x.totalStock <= 0; 
+        const stockText = isOut ? '<span style="color:var(--primary);">สินค้าหมด</span>' : `เหลือ ${x.totalStock} ชิ้น`; // 👈
+        const soldText = `ขายแล้ว ${x.sold || 0} ชิ้น`;
+        const isFav = userFavorites.includes(x.id);
+
+        c.innerHTML += `
+          <div class="product-card">
+            <button class="fav-btn ${isFav ? 'active' : ''}" onclick="toggleFav('${x.id}')"><i class="${isFav ? 'fas' : 'far'} fa-heart"></i></button>
+            <img src="${x.image}" class="p-img">
+            <div class="p-details">
+              <div><div class="p-name">${x.name}</div><div class="p-stock">${stockText} | ${soldText}</div></div>
+              <div><div class="p-price">฿${x.price}</div>
+              <button class="p-btn" onclick="openQtyModal('${x.id}')" ${isOut?'disabled':''}>${isOut?'หมด':'ใส่ตะกร้า'}</button>
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+    // --- (5) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันแสดงสินค้า ⭐️⭐️ ---
+
+
+    // --- (ฟังก์ชัน Favorite เหมือนเดิม) ---
+    async function loadFavorites() {
+       const doc = await db.collection('favorites').doc(userId).get();
+       userFavorites = doc.exists ? (doc.data().ids || []) : [];
+       renderProducts(allProducts);
+    }
+    async function toggleFav(id) {
+       const idx = userFavorites.indexOf(id);
+       if(idx > -1) { userFavorites.splice(idx, 1); showToast('ลบจากรายการที่ชอบ'); } 
+       else { userFavorites.push(id); showToast('เพิ่มในรายการที่ชอบ'); }
+       const btns = document.querySelectorAll(`.fav-btn[onclick="toggleFav('${id}')"]`);
+       btns.forEach(btn => {
+         if(userFavorites.includes(id)) { btn.classList.add('active'); btn.innerHTML = '<i class="fas fa-heart"></i>'; } 
+         else { btn.classList.remove('active'); btn.innerHTML = '<i class="far fa-heart"></i>'; }
+       });
+       await db.collection('favorites').doc(userId).set({ ids: userFavorites });
+    }
+    function openFav() {
+      document.getElementById('favModal').style.display = 'flex';
+      const con = document.getElementById('favContainer');
+      con.innerHTML = '';
+      const favItems = allProducts.filter(p => userFavorites.includes(p.id));
+      if(favItems.length === 0) return con.innerHTML = '<div class="empty-fav">ยังไม่มีรายการที่ชอบ</div>';
+      favItems.forEach(x => {
+        con.innerHTML += `<div class="product-card"><button class="fav-btn active" onclick="toggleFav('${x.id}'); openFav();"><i class="fas fa-heart"></i></button><img src="${x.image}" class="p-img"><div class="p-details"><div class="p-name">${x.name}</div><div class="p-price">฿${x.price}</div><button class="p-btn" onclick="openQtyModal('${x.id}'); closeModal('favModal');">ใส่ตะกร้า</button></div></div>`;
+      });
+    }
+    function filterCategory(c,el) { document.querySelectorAll('.cat-item').forEach(e=>e.classList.remove('active')); el.classList.add('active'); renderProducts(c==='ทั้งหมด'?allProducts:allProducts.filter(x=>x.category===c)); }
+    
+    
+    // (4) ⭐️ [ลบ] ฟังก์ชัน filterProducts() เดิม (function filterProducts() { const t=... }) ถูกลบออกไป
+    
+
+    // (5) ⭐️ [ใหม่] เพิ่มฟังก์ชันทั้งหมดที่เกี่ยวข้องกับประวัติการค้นหา
+    // --- [ใหม่] ฟังก์ชันสำหรับประวัติการค้นหา ---
+    
+    function loadSearchHistory() {
+      const storedHistory = localStorage.getItem(HISTORY_KEY);
+      if (storedHistory) {
+        searchHistory = JSON.parse(storedHistory);
+      }
+    }
+
+    function showHistory() {
+      const dropdown = document.getElementById('searchHistoryDropdown');
+      if (!dropdown) return;
+      dropdown.innerHTML = '';
+      
+      if (searchHistory.length === 0) {
+        dropdown.innerHTML = '<div class="history-item" style="color:#999; cursor:default;">ไม่มีประวัติการค้นหา</div>';
+      } else {
+        searchHistory.forEach((term, index) => {
+          dropdown.innerHTML += `
+            <div class="history-item" onclick="useHistory('${term}')">
+              <span class="history-text"><i class="fas fa-history" style="color:#aaa; margin-right:8px;"></i> ${term}</span>
+              <span class="remove-history-btn" onclick="removeHistoryItem(event, ${index})"><i class="fas fa-times"></i></span>
+            </div>
+          `;
+        });
+        dropdown.innerHTML += '<div class="history-clear" onclick="clearHistory()"><i class="fas fa-trash-alt"></i> ล้างประวัติทั้งหมด</div>';
+      }
+      dropdown.style.display = 'block';
+    }
+
+    function hideHistory() {
+      const dropdown = document.getElementById('searchHistoryDropdown');
+      if (dropdown) dropdown.style.display = 'none';
+    }
+
+    function useHistory(term) {
+      document.getElementById('searchInput').value = term;
+      filterProducts(); // เรียกค้นหาเลย
+      hideHistory();
+    }
+
+    function removeHistoryItem(event, index) {
+      event.stopPropagation(); // ป้องกันไม่ให้ useHistory() ทำงาน
+      searchHistory.splice(index, 1);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
+      showHistory(); // อัปเดต UI
+    }
+
+    function clearHistory() {
+      searchHistory = [];
+      localStorage.removeItem(HISTORY_KEY);
+      showHistory(); // อัปเดต UI
+    }
+
+    function saveSearchTerm(term) {
+      if (!term || term.length < 2) return; // ไม่บันทึกคำสั้นๆ
+      
+      // ลบของเก่าที่ซ้ำกันออก
+      searchHistory = searchHistory.filter(item => item.toLowerCase() !== term.toLowerCase());
+      
+      // เพิ่มอันใหม่ไปข้างบน
+      searchHistory.unshift(term);
+      
+      // จำกัดจำนวน
+      if (searchHistory.length > MAX_HISTORY) {
+        searchHistory = searchHistory.slice(0, MAX_HISTORY);
+      }
+      
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory));
+    }
+
+    // ฟังก์ชันนี้จะถูกเรียกแทน filterProducts() เดิม
+    function handleSearchKey(event) {
+      const input = document.getElementById('searchInput');
+      const term = input.value.trim();
+      
+      // (A) ค้นหาแบบ Real-time (เหมือนเดิม)
+      filterProducts(); 
+      
+      // (B) ถ้ากด Enter ให้บันทึกคำค้นหา
+      if (event.key === 'Enter') {
+        saveSearchTerm(term);
+        input.blur(); // ซ่อนคีย์บอร์ด/ซ่อน dropdown
+        hideHistory();
+      }
+    }
+    
+    // (6) ⭐️ [ใหม่] สร้างฟังก์ชัน filterProducts() (ที่แยกออกมา)
+    // ฟังก์ชันนี้เหมือนกับฟังก์ชันเดิมของคุณ แต่เราย้ายมาไว้ตรงนี้
+    function filterProducts() { 
+      const t = document.getElementById('searchInput').value.toLowerCase(); 
+      renderProducts(allProducts.filter(x => x.name.toLowerCase().includes(t))); 
+    }
+    // --- (จบฟังก์ชันประวัติการค้นหา) ---
+
+    
+    // --- (6) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันเปิด Modal (openQtyModal) ⭐️⭐️ ---
+    function openQtyModal(id) {
+      const p = allProducts.find(x=>x.id===id);
+      if(!p || p.totalStock <= 0) return; // 👈 (เช็ก totalStock)
+      
+      currentSelectedId = id; 
+      currentQty = 1;
+      currentSelectedSize = null; 
+      currentSelectedSizeStock = null; // 👈 (รีเซ็ตสต็อกที่เลือก)
+      
+      document.getElementById('qtyImg').src=p.image;
+      document.getElementById('qtyName').innerText=p.name;
+      document.getElementById('qtyPrice').innerText='฿'+p.price;
+      // 👈 (เปลี่ยนเป็น totalStock)
+      document.getElementById('qtyTotalStock').innerText='มีสินค้า: '+p.totalStock; 
+      document.getElementById('qtyDisplay').value=1;
+      
+      // (6.1) JS: สร้างปุ่มเลือกไซส์ใหม่ (แสดงสต็อก)
+      const sizeContainer = document.getElementById('sizeSelector');
+      sizeContainer.innerHTML = ''; 
+      
+      // 👈 (เช็กจาก p.sizeStock)
+      if (p.sizeStock && Object.keys(p.sizeStock).length > 0) {
+        
+        const sizeKeys = Object.keys(p.sizeStock);
+        let firstAvailableButton = null;
+
+        sizeKeys.forEach(size => {
+          const stock = p.sizeStock[size]; // 👈 ดึงสต็อกของไซส์นี้
+          
+          const btn = document.createElement('button');
+          btn.className = 'size-btn';
+          // 👈 แสดงสต็อกบนปุ่ม
+          btn.textContent = `${size} (เหลือ ${stock})`; 
+          
+          if (stock <= 0) {
+            btn.disabled = true; // 👈 ปิดปุ่มถ้าสต็อกหมด
+          }
+          
+          btn.onclick = () => { 
+            // 👈 ส่ง 'stock' ไปที่ฟังก์ชันด้วย
+            selectSize(size, stock, btn); 
+          };
+          
+          sizeContainer.appendChild(btn);
+          
+          // (6.2) JS: หาปุ่มแรกที่กดได้ เพื่อ auto-select
+          if (stock > 0 && !firstAvailableButton) {
+            firstAvailableButton = btn;
+          }
+        });
+
+        // (6.3) JS: ถ้ามีปุ่มที่กดได้ (หรือมีแค่ปุ่มเดียว) ให้คลิกอัตโนมัติ
+        if (sizeKeys.length === 1 || firstAvailableButton) {
+            setTimeout(() => { 
+               (firstAvailableButton || sizeContainer.querySelector('.size-btn')).click();
+            }, 0);
+        }
+      } else {
+        // กรณีสำรอง (ไม่ควรเกิดขึ้นถ้าใช้ checkAndSeedData ใหม่)
+        const btn = document.createElement('button');
+        btn.className = 'size-btn active';
+        btn.textContent = 'One Size (เหลือ ?)';
+        sizeContainer.appendChild(btn);
+      }
+
+      document.getElementById('qtyModal').style.display='flex';
+    }
+    // --- (6) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันเปิด Modal ⭐️⭐️ ---
+
+
+    // --- (7) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันเลือกไซส์ (selectSize) ⭐️⭐️ ---
+    function selectSize(size, stock, el) { // 👈 รับ 'stock' มาด้วย
+      currentSelectedSize = size;
+      currentSelectedSizeStock = stock; // 👈 บันทึกสต็อกของไซส์ที่เลือก
+      
+      // (ลบ .active ออกจากปุ่มอื่น)
+      document.querySelectorAll('#sizeSelector .size-btn').forEach(btn => btn.classList.remove('active'));
+      el.classList.add('active');
+      
+      // (7.1) JS: ตรวจสอบจำนวนที่เลือกไว้
+      // ถ้าจำนวนที่เลือกไว้ (currentQty) มันเกินสต็อกของไซส์ใหม่ที่เพิ่งกด
+      // ให้ปรับ currentQty ลงมาเท่ากับสต็อกสูงสุด
+      if (currentQty > stock && stock > 0) {
+        currentQty = stock;
+        document.getElementById('qtyDisplay').value = currentQty;
+      } else if (stock === 0) {
+        currentQty = 1; // ตั้งเป็น 1 (แต่ตอนกดยืนยันจะเด้งบอกว่าหมด)
+        document.getElementById('qtyDisplay').value = 1;
+      }
+    }
+    // --- (7) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันเลือกไซส์ ⭐️⭐️ ---
+
+
+    // --- (8) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันเปลี่ยนจำนวน (changeQty) ⭐️⭐️ ---
+    function changeQty(n) {
+      // (8.1) JS: กำหนดเพดานสต็อก
+      let stockLimit = 99; // (ค่าเริ่มต้นถ้ายังไม่เลือกไซส์)
+      
+      if (currentSelectedSizeStock !== null) {
+        // ถ้าเลือกไซส์แล้ว ให้ใช้สต็อกของไซส์นั้น
+        stockLimit = currentSelectedSizeStock;
+      } else {
+        // ถ้ายังไม่เลือกไซส์ ใช้ totalStock (เผื่อไว้)
+        const p = allProducts.find(x=>x.id===currentSelectedId);
+        if (p) stockLimit = p.totalStock;
+      }
+
+      // (8.2) JS: ตรวจสอบไม่ให้เกินเพดาน
+      if (currentQty + n >= 1 && currentQty + n <= stockLimit) {
+        currentQty += n;
+        document.getElementById('qtyDisplay').value = currentQty;
+      } else if (currentQty + n > stockLimit) {
+        showToast('สินค้ามีไม่เกิน ' + stockLimit + ' ชิ้น', true);
+        currentQty = stockLimit; // ตั้งค่าสูงสุด
+        document.getElementById('qtyDisplay').value = currentQty;
+      }
+    }
+    // --- (8) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันเปลี่ยนจำนวน ⭐️⭐️ ---
+
+    
+    // --- (9) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันยืนยันใส่ตะกร้า (submitToCart) ⭐️⭐️ ---
+    function submitToCart() {
+      if (!currentSelectedSize) {
+        return showToast('กรุณาเลือกไซส์', true);
+      }
+      
+      // (9.1) JS: ตรวจสอบสต็อกของไซส์ที่เลือกอีกครั้ง
+      if (currentQty > currentSelectedSizeStock) {
+        return showToast(`ไซส์นี้เหลือ ${currentSelectedSizeStock} ชิ้น`, true);
+      }
+      if (currentSelectedSizeStock <= 0) {
+         return showToast('ไซส์นี้สินค้าหมดแล้ว', true);
+      }
+      
+      const p = allProducts.find(x=>x.id===currentSelectedId);
+      const ex = cart.find(x=>x.id===currentSelectedId && x.size === currentSelectedSize);
+      
+      if(ex) {
+        // (9.2) JS: เช็กสต็อกเทียบกับของในตะกร้า
+        if(ex.qty + currentQty <= currentSelectedSizeStock) {
+          ex.qty += currentQty;
+        } else { 
+          ex.qty = currentSelectedSizeStock; 
+          showToast('ปรับจำนวนสินค้าเท่าที่มีในสต็อกแล้ว', true); 
+        }
+      } else {
+        cart.push({...p, qty:currentQty, size: currentSelectedSize});
+      }
+      updateCart(); showToast('เพิ่มลงตะกร้าแล้ว'); closeModal('qtyModal');
+    }
+    // --- (9) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันยืนยันใส่ตะกร้า ⭐️⭐️ ---
+
+
+    // --- (10) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันปรับตะกร้า (adjustCartQty) ⭐️⭐️ ---
+    function adjustCartQty(idx, change) {
+      const item = cart[idx];
+      const product = allProducts.find(p => p.id === item.id);
+      
+      // (10.1) JS: ดึงสต็อกของไซส์นั้นๆ
+      const maxStock = product ? product.sizeStock[item.size] : item.qty; 
+      
+      let newQty = item.qty + change;
+      if(newQty > maxStock) { 
+        newQty = maxStock; 
+        showToast('สินค้ามีจำกัด ' + maxStock + ' ชิ้น', true); 
+      }
+      if(newQty < 1) newQty = 1;
+      cart[idx].qty = newQty;
+      openCart(); updateCart();
+    }
+    // --- (10) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันปรับตะกร้า ⭐️⭐️ ---
+
+    function updateCart() { document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0); }
+
+
+    // --- (ฟังก์ชันคูปอง - เหมือนเดิม) ---
+    async function applyCoupon() {
+      const codeInput = document.getElementById('couponInput');
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) return showToast('กรุณากรอกโค้ด', true);
+      const btn = document.getElementById('couponBtn');
+      btn.disabled = true; btn.innerText = 'รอ...';
+      try {
+        const couponRef = db.collection('coupons').doc(code);
+        const couponDoc = await couponRef.get();
+        if (!couponDoc.exists) {
+          showToast('โค้ดส่วนลดไม่ถูกต้อง', true);
+          currentDiscount = { code: null, type: null, value: 0 };
+        } else {
+          const couponData = couponDoc.data();
+          showToast('ใช้โค้ดส่วนลดสำเร็จ!');
+          currentDiscount = { code: code, ...couponData };
+        }
+      } catch (e) {
+        console.error("Error applying coupon:", e);
+        showToast('เกิดข้อผิดพลาด', true);
+        currentDiscount = { code: null, type: null, value: 0 };
+      } finally {
+        btn.disabled = false; btn.innerText = 'ใช้โค้ด';
+        openCart(); 
+      }
+    }
+
+    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน openCart() ⭐️⭐️
+    function openCart() {
+      const c = document.getElementById('cartItemsContainer'); 
+      c.innerHTML = cart.length ? '' : '<p>ว่างเปล่า</p>';
+      subtotalAmount = 0; 
+      cart.forEach((x,i) => { 
+        subtotalAmount += (x.price * x.qty); 
+        const sizeDisplay = (x.size && x.size !== 'One Size') ? ` (ไซส์: ${x.size})` : '';
+        
+        // [!!] เพิ่ม <img src="${x.image}" ...> เข้าไป
+        c.innerHTML+=`
+          <div class="cart-item">
+            <img src="${x.image}" class="cart-item-img"> 
+            
+            <div class="cart-item-info">
+              <b>${x.name}</b><span style="font-size: 0.9rem; color: #555;">${sizeDisplay}</span><br>
+              <span style="color:var(--primary);">฿${x.price}</span>
+              <div class="mini-qty-box">
+                <button class="mini-qty-btn" onclick="adjustCartQty(${i}, -1)">-</button>
+                <span class="mini-qty-val">${x.qty}</span>
+                <button class="mini-qty-btn" onclick="adjustCartQty(${i}, 1)">+</button>
+              </div>
+            </div>
+            <div class="cart-item-controls">
+               <b style="margin-right:10px;">฿${x.price*x.qty}</b>
+               <button onclick="cart.splice(${i},1);openCart();updateCart()" style="border:none;background:none;color:#999;cursor:pointer;"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>`; 
+      });
+
+      // (ส่วนที่เหลือของฟังก์ชันเหมือนเดิม)
+      discountApplied = 0;
+      const discountDisplay = document.getElementById('discountDisplay');
+      if (currentDiscount.code && subtotalAmount > 0) {
+        if (currentDiscount.type === 'percent') {
+          discountApplied = (subtotalAmount * currentDiscount.value) / 100;
+        } else if (currentDiscount.type === 'fixed') {
+          discountApplied = currentDiscount.value;
+        }
+        if (discountApplied > subtotalAmount) {
+          discountApplied = subtotalAmount;
+        }
+        finalTotalAmount = subtotalAmount - discountApplied; 
+        document.getElementById('couponCodeDisplay').innerText = currentDiscount.code;
+        document.getElementById('discountAmount').innerText = `-฿${discountApplied.toFixed(0)}`;
+        discountDisplay.style.display = 'flex';
+      } else {
+        finalTotalAmount = subtotalAmount; 
+        discountDisplay.style.display = 'none';
+      }
+      document.getElementById('subTotalPrice').innerText = '฿' + subtotalAmount;
+      document.getElementById('totalPrice').innerText = '฿' + finalTotalAmount;
+      document.getElementById('cartModal').style.display='flex';
+    }
+    // ⭐️⭐️ [END] แก้ไขฟังก์ชัน openCart() ⭐️⭐️
+    
+    // --- (ฟังก์ชันชำระเงิน - [แก้ไขแล้ว]) ---
+    function openPayment() { 
+      if(!cart.length) return showToast('ไม่มีสินค้าในตะกร้า', true);
+      
+      // ⭐️ --- [START] เพิ่มโค้ดตรวจสอบการ Login --- ⭐️
+      // (userId จะมีคำว่า 'guest_' นำหน้า ถ้ายังไม่ได้ Login)
+      if (userId.startsWith('guest_')) {
+        
+        // 1. เรียกใช้ Modal ยืนยันที่มีอยู่
+        document.getElementById('confirmIcon').innerHTML = '👤'; // ไอคอนรูปคน
+        document.getElementById('confirmTitle').innerText = 'กรุณาเข้าสู่ระบบ';
+        document.getElementById('confirmDesc').innerText = 'คุณต้องเข้าสู่ระบบก่อน จึงจะสามารถสั่งซื้อสินค้าได้';
+        
+        // 2. ตั้งค่าปุ่ม "ยืนยัน"
+        const btnConfirm = document.getElementById('btnConfirmAction');
+        btnConfirm.innerText = 'ไปหน้า Login'; // เปลี่ยนข้อความปุ่ม
+        
+        // 3. ตั้งค่า Action ให้ปุ่ม
+        btnConfirm.onclick = () => {
+          window.location.href = 'index.html'; // สั่งให้ไปหน้า index.html
+        };
+        
+        // 4. แสดง Modal
+        document.getElementById('confirmModal').style.display = 'flex';
+        
+        // 5. หยุดการทำงาน ไม่ให้ไปต่อ
+        return; 
+      }
+      // ⭐️ --- [END] สิ้นสุดโค้ดตรวจสอบ --- ⭐️
+
+      // ถ้า Login แล้ว (โค้ดเดิม)
+      document.getElementById('cartModal').style.display='none'; 
+      document.getElementById('paymentModal').style.display='flex'; 
+    }
+
+    function toggleBank(s) { document.getElementById('bankDetails').style.display=s?'block':'none'; if(!s) document.getElementById('bankSelect').value=''; }
+    function showQR() {
+      const b=document.getElementById('bankSelect').value;
+      document.getElementById('qrCodeContainer').style.display=b?'block':'none';
+      if(b) document.getElementById('qrImage').src=`https://promptpay.io/0970482500/${finalTotalAmount}`;
+    }
+    
+
+    // --- (11) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ (confirmOrder) ⭐️⭐️ ---
+    async function confirmOrder() {
+      const n=document.getElementById('custName').value, p=document.getElementById('custPhone').value, a=document.getElementById('custAddress').value;
+      const pm=document.querySelector('input[name="payment"]:checked').value;
+      const bankSelect = document.getElementById('bankSelect');
+      const bankName = bankSelect ? bankSelect.value : '';
+
+      if(!n||!p||!a) return showToast('กรุณากรอกข้อมูลให้ครบ', true);
+      if (pm === 'bank' && !bankName) return showToast('กรุณาเลือกธนาคาร', true);
+
+      const btn=document.getElementById('confirmPayBtn'); btn.disabled=true; btn.innerText="กำลังบันทึก...";
+      try {
+        // (11.1) JS: แก้ไข Transaction ให้ตัดสต็อกตามไซส์
+        await Promise.all(cart.map(i => db.runTransaction(async t => {
+          const productRef = db.collection('products').doc(i.id);
+          const d = await t.get(productRef);
+          if(!d.exists) throw "สินค้าไม่พบ";
+          
+          const data = d.data();
+          const newSizeStockMap = data.sizeStock; // 1. ดึง Map สต็อกออกมา
+          
+          const oldSizeStock = newSizeStockMap[i.size] || 0; // 2. หาสต็อกของไซส์ที่สั่ง
+          
+          if (oldSizeStock < i.qty) {
+             throw `สินค้า ${i.name} ไซส์ ${i.size} ไม่พอ`;
+          }
+
+          newSizeStockMap[i.size] = oldSizeStock - i.qty; // 3. คำนวณสต็อกไซส์ใหม่
+          
+          const newTotalStock = data.totalStock - i.qty; // 4. คำนวณสต็อกรวมใหม่
+          const newSold = (data.sold || 0) + i.qty;
+
+          // 5. อัปเดตกลับเข้าไป
+          t.update(productRef, {
+            sizeStock: newSizeStockMap, // 👈 อัปเดต Map ทั้งก้อน
+            totalStock: newTotalStock, // 👈 อัปเดตสต็อกรวม
+            sold: newSold
+          });
+        })));
+        
+        // (11.2) JS: บันทึก Order (ส่วนนี้เหมือนเดิม)
+        await db.collection('orders').add({
+          customer:{name:n,phone:p,address:a}, 
+          items:cart,
+          subtotal: subtotalAmount,
+          discount: discountApplied,
+          coupon: currentDiscount.code || '-',
+          total: finalTotalAmount,
+          paymentMethod:pm, 
+          bank:pm==='bank'?bankName:'-', 
+          user:userId, 
+          status:'pending', 
+          timestamp:firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        sendMsgInternal(`[ระบบ] สั่งซื้อสำเร็จ ยอด ฿${finalTotalAmount}`);
+        
+        cart=[]; 
+        currentDiscount = { code: null, type: null, value: 0 };
+        document.getElementById('couponInput').value = '';
+        
+        updateCart();
+        closeModal('paymentModal');
+        document.getElementById('successModal').style.display = 'flex';
+      } catch(e){ 
+        console.error("Order failed: ", e);
+        // (11.3) JS: แสดง Error ที่ชัดเจนขึ้น
+        showToast(typeof e === 'string' ? e : 'เกิดข้อผิดพลาด', true); 
+      } finally { 
+        btn.disabled=false; btn.innerText="ยืนยันการสั่งซื้อ"; 
+      }
+    }
+    // --- (11) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ ⭐️⭐️ ---
+
+    
+    // --- (ฟังก์ชันประวัติการสั่งซื้อ และ Chat) ---
+    
+    // ⭐️⭐️⭐️ [START] แก้ไขฟังก์ชัน openHistory ⭐️⭐️⭐️
+    async function openHistory() {
+      document.getElementById('historyModal').style.display = 'flex';
+      const con = document.getElementById('historyContainer');
+      con.innerHTML = '<p style="text-align:center;">กำลังโหลด...</p>';
+      
+      // [FIX 1] ตรวจสอบว่า Login หรือยัง
+      if (userId.startsWith('guest_')) {
+           con.innerHTML = '<p style="text-align:center; color:#999;">กรุณาเข้าสู่ระบบเพื่อดูประวัติการสั่งซื้อ</p>';
+           return;
+      }
+
+      const s = await db.collection('orders').where('user', '==', userId).get();
+      if(s.empty) return con.innerHTML = '<p style="text-align:center; color:#999;">ไม่มีประวัติการสั่งซื้อ</p>';
+      
+      let ords = []; 
+      // ⭐️ [แก้ไข] เพิ่มการดึง o.id เข้าไปใน array
+      s.forEach(d => ords.push({ id: d.id, ...d.data() })); 
+      
+      ords.sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
+      con.innerHTML = '';
+      
+      ords.forEach(o => {
+        let items = ''; 
+        o.items.forEach(i => {
+          const sizeDisplay = (i.size && i.size !== 'One Size') ? ` (ไซส์: ${i.size})` : '';
+          
+          // [FIX 2] แก้ไข Bug: เปลี่ยนจาก i.price*x.qty เป็น i.price*i.qty
+          items += `<div class="item-row"><span>${i.name}${sizeDisplay} x${i.qty}</span><span>฿${i.price*i.qty}</span></div>`; 
+        });
+        
+        // ⭐️ [แก้ไข] เพิ่มการเช็คสถานะ 'cancelled'
+        let statusText = 'รอจัดส่ง';
+        let statusColor = 'var(--primary)';
+        if (o.status === 'completed') {
+          statusText = 'สำเร็จ';
+          statusColor = 'green';
+        } else if (o.status === 'cancelled') {
+          statusText = 'ยกเลิก';
+          statusColor = '#d93025'; // สีแดง
+        }
+        
+        // ⭐️⭐️ [แก้ไข] เพิ่มปุ่มยกเลิก และ "แก้ไขที่อยู่" ⭐️⭐️
+        let orderActionsHtml = '';
+        if (o.status === 'pending') {
+          // (ใช้ single quote รอบ onclick และ double quote รอบ string parameter)
+          orderActionsHtml = `
+            <div class="order-total-actions">
+              <button class="btn-edit-order" id="editBtn-${o.id}" onclick='openEditAddressModal("${o.id}", ${JSON.stringify(o.customer)})'>
+                แก้ไขที่อยู่
+              </button>
+              <button class="btn-cancel-order" id="cancelBtn-${o.id}" onclick='cancelOrder("${o.id}", ${JSON.stringify(o.items)})'>
+                ยกเลิก
+              </button>
+            </div>`;
+        }
+        
+        // ⭐️ [แก้ไข] เพิ่มตัวแปร statusText, statusColor, และ orderActionsHtml
+        con.innerHTML += `
+          <div class="order-card">
+            <div class="order-header">
+              <span>📅 ${o.timestamp?new Date(o.timestamp.seconds*1000).toLocaleString('th-TH'):'-'}</span>
+              <span class="order-status" style="color:${statusColor}">${statusText}</span>
+            </div>
+            <div class="order-items">${items}</div>
+            <div class="order-total">
+              <span>รวม: ฿${o.total}</span>
+              ${orderActionsHtml}
+            </div>
+          </div>`;
+      });
+    }
+    // ⭐️⭐️⭐️ [END] แก้ไขฟังก์ชัน openHistory ⭐️⭐️⭐️
+    
+    
+    // ⭐️⭐️⭐️ [START] เพิ่มฟังก์ชัน cancelOrder ⭐️⭐️⭐️
+    async function cancelOrder(orderId, items) {
+      // 1. ถามยืนยัน
+      document.getElementById('confirmIcon').innerHTML = '🗑️';
+      document.getElementById('confirmTitle').innerText = 'ยืนยันการยกเลิก?';
+      document.getElementById('confirmDesc').innerText = 'คุณต้องการยกเลิกออเดอร์นี้ใช่หรือไม่? สต็อกสินค้าจะถูกคืนเข้าระบบ';
+      const btnConfirm = document.getElementById('btnConfirmAction');
+      btnConfirm.innerText = 'ยืนยันยกเลิก';
+      
+      btnConfirm.onclick = async () => {
+        closeModal('confirmModal');
+        const cancelBtn = document.getElementById(`cancelBtn-${orderId}`);
+        if (cancelBtn) {
+          cancelBtn.disabled = true;
+          cancelBtn.innerText = 'กำลังยกเลิก...';
+        }
+        
+        try {
+          // 2. คืนสต็อกสินค้า (Transaction)
+          // ใช้ Promise.all เพื่อรอให้การคืนสต็อกทุกชิ้นเสร็จสิ้น
+          await Promise.all(items.map(item => db.runTransaction(async t => {
+            const productRef = db.collection('products').doc(item.id);
+            const doc = await t.get(productRef);
+            
+            if (!doc.exists) {
+              // ถ้าสินค้าถูกลบไปแล้ว ก็แค่ข้ามไป
+              console.warn(`Product ${item.id} not found, skipping stock return.`);
+              return; 
+            }
+            
+            const data = doc.data();
+            const newSizeStockMap = data.sizeStock;
+            const oldSizeStock = newSizeStockMap[item.size] || 0;
+            
+            // คืนสต็อก
+            newSizeStockMap[item.size] = oldSizeStock + item.qty;
+            const newTotalStock = data.totalStock + item.qty;
+            // ลด 'ยอดขาย' (sold)
+            const newSold = Math.max(0, (data.sold || 0) - item.qty); 
+            
+            t.update(productRef, {
+              sizeStock: newSizeStockMap,
+              totalStock: newTotalStock,
+              sold: newSold
+            });
+          })));
+
+          // 3. อัปเดตสถานะออเดอร์เป็น 'cancelled'
+          await db.collection('orders').doc(orderId).update({
+            status: 'cancelled'
+          });
+
+          showToast('ยกเลิกออเดอร์เรียบร้อย');
+          
+          // 4. รีเฟรชประวัติการสั่งซื้อเพื่อแสดงผลลัพธ์
+          openHistory(); 
+          
+        } catch (e) {
+          console.error("Error cancelling order: ", e);
+          showToast('เกิดข้อผิดพลาด: ' + e.message, true);
+          if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.innerText = 'ยกเลิกออเดอร์';
+          }
+        }
+      };
+      
+      // 5. แสดง Modal ยืนยัน
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+    // ⭐️⭐️⭐️ [END] เพิ่มฟังก์ชัน cancelOrder ⭐️⭐️⭐️
+    
+    
+    function openEditAddressModal(orderId, customer) {
+      if (!customer) return; // ป้องกัน error
+      
+      currentEditingOrderId = orderId; // 1. เก็บ ID ออเดอร์ไว้ในตัวแปร global
+      
+      // 2. เติมข้อมูลเดิมลงในช่อง input
+      document.getElementById('editCustName').value = customer.name || '';
+      document.getElementById('editCustPhone').value = customer.phone || '';
+      document.getElementById('editCustAddress').value = customer.address || '';
+      
+      // 3. แสดงหน้าต่าง Modal
+      document.getElementById('editAddressModal').style.display = 'flex';
+    }
+    
+    async function saveAddress() {
+      if (!currentEditingOrderId) return; // ตรวจสอบว่ามี ID ออเดอร์ที่จะแก้หรือไม่
+      
+      const btn = document.getElementById('saveAddressBtn');
+      btn.disabled = true;
+      btn.innerText = "กำลังบันทึก...";
+
+      // 1. ดึงข้อมูลใหม่จาก input
+      const newName = document.getElementById('editCustName').value.trim();
+      const newPhone = document.getElementById('editCustPhone').value.trim();
+      const newAddress = document.getElementById('editCustAddress').value.trim();
+
+      // 2. ตรวจสอบว่ากรอกครบ
+      if (!newName || !newPhone || !newAddress) {
+        showToast('กรุณากรอกข้อมูลให้ครบ', true);
+        btn.disabled = false;
+        btn.innerText = "บันทึกการเปลี่ยนแปลง";
+        return;
+      }
+      
+      // 3. สร้าง object ที่อยู่ใหม่
+      const newCustomerData = {
+        name: newName,
+        phone: newPhone,
+        address: newAddress
+      };
+
+      try {
+        // 4. อัปเดตข้อมูลใน Firestore
+        await db.collection('orders').doc(currentEditingOrderId).update({
+          customer: newCustomerData
+        });
+        
+        showToast('อัปเดตที่อยู่เรียบร้อย');
+        closeModal('editAddressModal');
+        currentEditingOrderId = null; // 5. เคลียร์ ID
+        openHistory(); // 6. รีเฟรชหน้าประวัติ
+        
+      } catch (e) {
+        console.error("Error updating address: ", e);
+        showToast('เกิดข้อผิดพลาด: ' + e.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "บันทึกการเปลี่ยนแปลง";
+      }
+    }
+    function toggleChat() { const w=document.getElementById('chatWindow'); w.style.display=w.style.display==='none'?'flex':'none'; if(w.style.display==='flex') scrollToBottom(); }
+    function scrollToBottom() { const b=document.getElementById('chatBody'); b.scrollTop=b.scrollHeight; }
+    function handleEnter(e) { if(e.key==='Enter') sendMsg(); }
+    function sendMsg() {
+      const txt = document.getElementById('msgInput').value.trim();
+      if(!txt) return;
+      document.getElementById('msgInput').value = '';
+      sendMsgInternal(txt);
+    }
+    
+    // 🔥 --- [START] แก้ไขฟังก์ชัน sendMsgInternal --- 🔥
+    function sendMsgInternal(text) {
+      
+      // 🔥 [NEW] 1. รีเซ็ต Timer 30 นาที (ลบของเก่าทิ้ง)
+      if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+      }
+      
+      // (1) ส่งข้อความไปที่ messages sub-collection
+      db.collection('chats').doc(userId).collection('messages').add({ 
+        text: text, 
+        sender: 'user', 
+        timestamp: firebase.firestore.FieldValue.serverTimestamp() 
+      });
+      
+      // (2) 🔥 อัปเดตข้อมูลล่าสุดของแชท (เพิ่ม displayName และ photoURL)
+      db.collection('chats').doc(userId).set({
+        lastMessage: text,
+        lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+        userId: userId,
+        // ใช้ข้อมูลจาก currentUserData ที่โหลดมาตอน login
+        email: currentUserData.email || (document.getElementById('custName').value || 'Guest'),
+        displayName: currentUserData.displayName || (document.getElementById('custName').value || 'Guest'),
+        photoURL: currentUserData.photoURL || null
+      }, { merge: true }); // ใช้ merge: true เพื่อไม่ให้ลบสถานะ isBlocked (ถ้ามี)
+      
+      // (3) เรียก Auto-reply
+      setTimeout(() => autoReply(text), 1000);
+      
+      // 🔥 [NEW] 2. เริ่ม Timer 30 นาทีใหม่
+      inactivityTimer = setTimeout(() => {
+        // ฟังก์ชันที่จะทำงานเมื่อครบ 30 นาที
+        sendInactivityMessage();
+      }, INACTIVITY_TIMEOUT_MS);
+    }
+    // 🔥 --- [END] แก้ไขฟังก์ชัน sendMsgInternal --- 🔥
+
+    // 🔥 --- [NEW] ฟังก์ชันสำหรับส่งข้อความเมื่อรอนาน --- 🔥
+    function sendInactivityMessage() {
+      const followUpMsg = {
+        text: "ขออภัยที่ให้รอนานครับ ขณะนี้แอดมินอาจติดลูกค้าท่านอื่นอยู่ จะรีบมาตอบกลับโดยเร็วที่สุดครับ 🙏",
+        sender: 'admin',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      
+      // ส่งข้อความติดตามผล
+      db.collection('chats').doc(userId).collection('messages').add(followUpMsg);
+      
+      // อัปเดต lastActive (เพื่อให้แชทเด้งไปข้างบนฝั่งแอดมิน)
+      db.collection('chats').doc(userId).set({ 
+          lastActive: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      // เคลียร์ Timer (เราจะส่งแค่ครั้งเดียว)
+      inactivityTimer = null;
+    }
+    // 🔥 --- [END] ฟังก์ชันใหม่ --- 🔥
+
+
+    // (ใหม่!) ฟังก์ชันสำหรับจัดการการคลิกปุ่มตัวเลือก
+    function handleOptionClick(optionText, messageId) {
+      // 1. ส่งข้อความตัวเลือกนั้นเป็นข้อความของผู้ใช้
+      // (ฟังก์ชัน sendMsgInternal จะไปเรียก autoReply ให้อัตโนมัติ)
+      sendMsgInternal(optionText);
+
+      // 2. ปิดการใช้งานปุ่ม (เปลี่ยนปุ่มเป็นข้อความ "เลือกแล้ว")
+      const optionsContainer = document.getElementById(`options-${messageId}`);
+      if (optionsContainer) {
+        optionsContainer.innerHTML = `<div class="option-btn-selected">(เลือก: ${optionText})</div>`;
+      }
+    }
+
+    // 🔥 --- [START] แก้ไขฟังก์ชัน autoReply (เพิ่ม Logic 20 นาที) --- 🔥
+    async function autoReply(t) {
+      
+      // 1. ตรวจสอบสถานะแชท
+      let welcomeHasBeenSent = false;
+      let welcomeSentTime = null; // 👈 [NEW] เพิ่มตัวแปรเก็บเวลา
+      let chatData = {};
+
+      try {
+        const chatDoc = await db.collection('chats').doc(userId).get();
+        if (chatDoc.exists) {
+          chatData = chatDoc.data(); 
+          welcomeHasBeenSent = chatData.welcomeSent === true;
+          welcomeSentTime = chatData.welcomeSentTime || null; // 👈 [NEW] ดึงเวลาที่บอทตอบล่าสุด
+        }
+      } catch (e) {
+        console.error("Error checking welcome flags:", e);
+        welcomeHasBeenSent = true; // กันพลาด (จะไม่ส่ง welcome)
+      }
+
+      let r=''; t=t.toLowerCase();
+
+      // 2. 👈 [NEW] ตรรกะใหม่ในการตัดสินใจส่งข้อความต้อนรับ
+      let shouldSendWelcome = false;
+      if (!welcomeHasBeenSent) {
+        // (A) ยังไม่เคยส่งเลย (welcomeSent: false)
+        shouldSendWelcome = true;
+      } else if (welcomeSentTime) {
+        // (B) เคยส่งแล้ว แต่เช็คว่าบอทตอบล่าสุดนานหรือยัง
+        const now = new Date();
+        const lastBotReplyTime = welcomeSentTime.toDate();
+        const diffMs = now - lastBotReplyTime;
+        const diffMins = diffMs / (1000 * 60); // แปลงเป็นนาที
+
+        if (diffMins > 20) { // 👈 ถ้าบอทไม่ได้ตอบอะไรเลยเกิน 20 นาที
+          shouldSendWelcome = true; // ให้ส่ง Welcome ใหม่
+        }
+      } else {
+        // (C) กรณีข้อมูลเก่า (welcomeSent: true แต่ไม่มี welcomeSentTime)
+        // ให้ส่งไปเลยเพื่อเป็นการเริ่มต้นใหม่
+        shouldSendWelcome = true;
+      }
+      
+      // 3. 👈 [MODIFIED] ถ้าตัดสินใจว่า "ควรส่ง"
+      if (shouldSendWelcome) {
+        const welcomeMsg = {
+          sender: 'admin',
+          text: 'สวัสดีครับ! มีอะไรให้ช่วยไหมครับ? สามารถเลือกจากตัวเลือกด้านล่างได้เลยครับ',
+          type: 'options', 
+          options: ['สอบถามราคาสินค้า', 'ติดตามสถานะจัดส่ง', 'สอบถามเรื่องอื่นๆ'], 
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        // ส่งข้อความแบบพิเศษ (ที่มีปุ่ม)
+        db.collection('chats').doc(userId).collection('messages').add(welcomeMsg);
+        
+        // 4. "ตั้งธง" (set flag) และ "ตั้งเวลา" (อัปเดตเวลาที่บอทตอบ)
+        db.collection('chats').doc(userId).set({ 
+            lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+            welcomeSent: true, // 👈 ตั้งธง
+            welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() // 👈 [NEW] บันทึกเวลา
+        }, { merge: true });
+        
+        return; // ออกจากฟังก์ชัน
+      }
+
+      // 5. (เหมือนเดิม) ถ้า "ไม่ควรส่ง" (แปลว่าอยู่ในบทสนทนา) ให้เช็ค keyword
+      if(t.includes('ราคาสินค้า')) r='ราคาสินค้าตามป้ายสินค้าเลยครับ';
+      if(t.includes('จัดส่งวันไหน')) r='สินค้าจัดส่งทุกวันไม่มีวันหยุดครับ'; 
+      if(t.includes('สถานะจัดส่ง')) r='คุณสามารถตรวจสอบสถานะได้ที่เมนู "ประวัติการสั่งซื้อ" ครับ';
+      if(t.includes('เรื่องอื่นๆ')) r='กำลังเรียกแอดมินให้สักครู่นะครับ กรุณาพิมพ์คำถามทิ้งไว้ได้เลยครับ';
+
+      // 6. (เหมือนเดิม) ถ้ามีคำตอบ (r) ให้ส่งกลับไป
+      if(r) {
+         db.collection('chats').doc(userId).collection('messages').add({text:r, sender:'admin', timestamp:firebase.firestore.FieldValue.serverTimestamp()});
+         
+         // 7. 👈 [NEW] อัปเดตเวลาล่าสุดที่บอทตอบกลับด้วย
+         // เพื่อให้ timer 20 นาที เริ่มนับใหม่จากข้อความนี้
+         db.collection('chats').doc(userId).set({ 
+             lastActive: firebase.firestore.FieldValue.serverTimestamp(),
+             welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() // 👈 [NEW] อัปเดตเวลา
+         }, { merge: true });
+      }
+    }
+    // 🔥 --- [END] แก้ไขฟังก์ชัน autoReply --- 🔥
+
+    
+    // 🔥 --- [NEW] ฟังก์ชันดักฟังสถานะบล็อค --- 🔥
+    // ฟังก์ชันนี้จะคอยฟังการเปลี่ยนแปลงที่เอกสาร 'chats/{userId}'
+    function listenToChatStatus() {
+      if (!userId) return; // ถ้ายังไม่มี userId ก็ไม่ต้องทำอะไร
+
+      db.collection('chats').doc(userId).onSnapshot(doc => {
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.querySelector('.chat-input-area button'); // หาปุ่มส่ง
+
+        if (doc.exists) {
+          const chatData = doc.data();
+          const isBlocked = chatData.isBlocked || false; // ดึงค่า isBlocked (ถ้าไม่มีให้เป็น false)
+
+          if (isBlocked) {
+            // ถ้าถูกบล็อค
+            msgInput.disabled = true;
+            msgInput.placeholder = "❌ คุณถูกจำกัดการส่งข้อความ";
+            if (sendBtn) sendBtn.disabled = true;
+            
+            // 🔥 [NEW] ถ้าถูกบล็อค ให้ยกเลิก Timer 30 นาทีด้วย
+            if (inactivityTimer) clearTimeout(inactivityTimer);
+            
+          } else {
+            // ถ้าไม่ถูกบล็อค (หรือถูกปลดบล็อค)
+            msgInput.disabled = false;
+            msgInput.placeholder = "พิมพ์ข้อความ...";
+            if (sendBtn) sendBtn.disabled = false;
+          }
+        } else {
+          // ถ้าเอกสารยังไม่ถูกสร้าง (เช่น ยังไม่เคยแชท) ก็ให้พิมพ์ได้ตามปกติ
+          msgInput.disabled = false;
+          msgInput.placeholder = "พิมพ์ข้อความ...";
+          if (sendBtn) sendBtn.disabled = false;
+        }
+      });
+    }
+    
+    // 🔥 --- [START] แก้ไขฟังก์ชัน listenToChat --- 🔥
+    function listenToChat() {
+      db.collection('chats').doc(userId).collection('messages').orderBy('timestamp').onSnapshot(s => {
+        const b=document.getElementById('chatBody'); b.innerHTML='<div class="msg msg-admin">สวัสดีครับ!</div>';
+        
+        let hasAdminReply = false; // (1) ตัวแปรเช็กว่าแอดมินตอบหรือยัง
+        
+        s.forEach(d=> {
+          const data = d.data();
+          const msgId = d.id; // 👈 (ใหม่) ดึง ID ของข้อความ
+          let optionsHtml = '';
+          
+          // (2) ถ้าเจอข้อความจาก 'admin' (ที่ไม่ใช่ข้อความต้อนรับแรกสุด)
+          if (data.sender === 'admin' && data.text !== 'สวัสดีครับ!') {
+            hasAdminReply = true;
+          }
+
+          // (ใหม่) ตรวจสอบว่าข้อความนี้มี "ปุ่มตัวเลือก" หรือไม่
+          if (data.type === 'options' && data.options && data.options.length > 0) {
+            // (ใหม่) สร้าง HTML สำหรับปุ่ม
+            optionsHtml = `<div class="msg-options" id="options-${msgId}">`; // 👈 (ใหม่) ใส่ ID ให้ container
+            data.options.forEach(opt => {
+              // (ใหม่) เพิ่ม onclick ให้ปุ่ม
+              optionsHtml += `<button class="option-btn" onclick="handleOptionClick('${opt}', '${msgId}')">${opt}</button>`;
+            });
+            optionsHtml += `</div>`;
+          }
+
+          // (ใหม่) ประกอบร่าง HTML ของข้อความ (เพิ่ม optionsHtml เข้าไป)
+          b.innerHTML+=`
+            <div class="msg ${data.sender==='user'?'msg-user':'msg-admin'}">
+              ${data.text}
+              ${optionsHtml} 
+            </div>`;
+        });
+        
+        // (3) ถ้าแอดมินตอบกลับมาแล้ว ให้ยกเลิก Timer
+        if (hasAdminReply && inactivityTimer) {
+            console.log("Admin replied, cancelling 30-min timer.");
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null; // เคลียร์สถานะ
+        }
+        
+        scrollToBottom();
+      });
+    }
+    // 🔥 --- [END] แก้ไขฟังก์ชัน listenToChat --- 🔥
+
+    function closeModal(id){document.getElementById(id).style.display='none';}
+    function showToast(text, isError = false){
+      const t=document.getElementById('toast');
+      t.querySelector('span').innerText = text;
+      if(isError) {
+        t.classList.add('error');
+        t.querySelector('i').className = "fas fa-exclamation-circle";
+      } else {
+        t.classList.remove('error');
+        t.querySelector('i').className = "fas fa-check-circle";
+      }
+      t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'), 2500);
+    }
+  </script>
+</body>
+</html>
