@@ -391,6 +391,10 @@
         <input type="text" id="editName" class="form-control" placeholder="ตั้งชื่อของคุณ...">
       </div>
       <button id="saveProfileBtn" class="checkout-btn" onclick="saveProfile()">บันทึกการเปลี่ยนแปลง</button>
+      
+      <button id="getCouponBtn" class="checkout-btn" onclick="getLoginCoupon()" style="background-color: #28a745; margin-top: 10px;">
+          <i class="fas fa-ticket-alt"></i> รับโค้ดส่วนลดสมาชิก
+      </button>
       <button class="checkout-btn logout-btn" onclick="closeModal('profileModal'); openLogoutConfirm()">ออกจากระบบ</button>
     </div>
   </div>
@@ -502,7 +506,7 @@
   <div id="confirmModal" class="modal" style="align-items: center;">
     <div class="confirm-modal-box">
       <div id="confirmIcon" class="confirm-icon">❓</div>
-      <div id="confirmTitle" class="confirm-title">ยืนยัน?</div>
+      <div id="confirmTitle" class="confirm-title">ยืนSยัน?</div>
       <div id="confirmDesc" class="confirm-desc">ข้อความ...</div>
       <div class="confirm-actions">
         <button class="btn-confirm-action btn-no" onclick="closeModal('confirmModal')">ยกเลิก</button>
@@ -733,12 +737,15 @@
     // (ย้าย let currentUserData = {}; ไปเป็น Global)
     async function loadUserProfile(user) {
       const doc = await db.collection('users').doc(user.uid).get();
-      if (doc.exists) { currentUserData = doc.data(); } 
+      if (doc.exists) { 
+          currentUserData = doc.data(); 
+      } 
       else {
         currentUserData = {
           displayName: user.displayName || user.email.split('@')[0],
           photoURL: user.photoURL || 'https://via.placeholder.com/150?text=User',
-          email: user.email
+          email: user.email,
+          hasClaimedMemberCoupon: false // ⭐️ [ใหม่] เพิ่มค่าเริ่มต้น
         };
       }
       updateProfileUI();
@@ -751,8 +758,24 @@
       document.getElementById('editAvatarPreview').src = currentUserData.photoURL;
       document.getElementById('custName').value = currentUserData.displayName;
     }
+    
+    // ⭐️ [แก้ไข] 3. แก้ไขฟังก์ชันเปิด Modal Profile ⭐️
     function openProfileModal() { 
-      currentAvatarFile = null; // 👈 รีเซ็ตไฟล์ที่เลือก ทุกครั้งที่เปิด modal
+      currentAvatarFile = null; // 👈 รีเซ็ตไฟล์ที่เลือก
+      
+      // ⭐️ [ใหม่] ตรวจสอบสถานะคูปอง ⭐️
+      const couponBtn = document.getElementById('getCouponBtn');
+      if (currentUserData.hasClaimedMemberCoupon === true) {
+          couponBtn.disabled = true;
+          couponBtn.innerHTML = '<i class="fas fa-check"></i> รับโค้ดแล้ว (SALE100)';
+          couponBtn.style.background = '#6c757d'; // สีเทา
+      } else {
+          couponBtn.disabled = false;
+          couponBtn.innerHTML = '<i class="fas fa-ticket-alt"></i> รับโค้ดส่วนลดสำหรับสมาชิก';
+          couponBtn.style.background = '#28a745'; // สีเขียว
+      }
+      // ⭐️ [จบ] ⭐️
+      
       document.getElementById('profileModal').style.display = 'flex'; 
     }
     
@@ -806,11 +829,16 @@
 
         // (6) บันทึกข้อมูลลง Firestore (ไม่ว่าจะเป็นลิงก์ใหม่ หรือ ลิงก์เดิม)
         btn.innerText = "กำลังบันทึก...";
-        await db.collection('users').doc(userId).set({
+        
+        // [แก้ไข] รวมข้อมูลเดิม (เช่น hasClaimedMemberCoupon) เข้าไปด้วย
+        const dataToSave = {
+          ...currentUserData, // 👈 เอาข้อมูลเดิมมาก่อน
           displayName: newName,
-          photoURL: newImgSrc, // 👈 บันทึกลิงก์ (ไม่ใช่ Base64)
+          photoURL: newImgSrc, 
           email: currentUserData.email
-        }, { merge: true });
+        };
+        
+        await db.collection('users').doc(userId).set(dataToSave, { merge: true }); // 👈 ใช้ merge
 
         // (7) อัปเดต UI (เหมือนเดิม)
         currentUserData.displayName = newName;
@@ -829,6 +857,49 @@
     }
     // ⭐️⭐️ [END] แก้ไขฟังก์ชัน saveProfile ⭐️⭐️
     
+    
+    async function getLoginCoupon() {
+        // 1. ตรวจสอบซ้ำ
+        if (userId.startsWith('guest_') || currentUserData.hasClaimedMemberCoupon === true) {
+            return;
+        }
+
+        const btn = document.getElementById('getCouponBtn');
+        btn.disabled = true;
+        btn.innerText = 'กำลังดำเนินการ...';
+
+        try {
+            // 2. อัปเดต "flag" ใน Firestore
+            await db.collection('users').doc(userId).set({
+                hasClaimedMemberCoupon: true
+            }, { merge: true });
+
+            // 3. อัปเดตข้อมูล local
+            currentUserData.hasClaimedMemberCoupon = true;
+
+            // 4. แจ้งเตือนผู้ใช้ (ใช้ Modal สำเร็จ)
+            closeModal('profileModal'); // ปิด modal โปรไฟล์
+            
+            // ⭐️ [แก้ไข] ใช้ successModal ⭐️
+            document.querySelector('#successModal .confirm-title').innerText = 'รับโค้ดสำเร็จ!';
+            document.querySelector('#successModal .confirm-desc').innerText = 'ยินดีด้วย! คุณได้รับโค้ด: MEMBER50(ส่วนลด 50 บาท),SALE100(ส่วนลด 25%)  กรุณาใช้ในหน้าตะกร้าสินค้า';
+            document.getElementById('successModal').style.display = 'flex';
+            
+            // (ต้องคืนค่า modal ให้เป็น "สั่งซื้อสำเร็จ" ด้วย เมื่อมันถูกปิด)
+            document.getElementById('successModal').querySelector('.btn-ok').onclick = () => {
+                closeModal('successModal');
+                // (คืนค่าข้อความเดิม)
+                document.querySelector('#successModal .confirm-title').innerText = 'สั่งซื้อสำเร็จ!';
+                document.querySelector('#successModal .confirm-desc').innerText = 'ขอบคุณที่ใช้บริการ ทางเราจะจัดส่งสินค้าให้เร็วที่สุด';
+            };
+
+        } catch (err) {
+            console.error("Error claiming coupon:", err);
+            showToast('เกิดข้อผิดพลาด: ' + err.message, true);
+            btn.disabled = false; // คืนปุ่มให้กดใหม่ได้
+            btn.innerText = 'รับโค้ดส่วนลดสมาชิก';
+        }
+    }
     // 🔥 --- [START] แก้ไขฟังก์ชัน openLogoutConfirm --- 🔥
     function openLogoutConfirm() {
       document.getElementById('confirmIcon').innerHTML = '🚪';
@@ -954,6 +1025,22 @@
         await b.commit();
         console.log("เพิ่มสินค้าตัวอย่าง (v.สต็อกตามไซส์) เรียบร้อย!");
       }
+      
+      // ⭐️ [ใหม่] ตรวจสอบ/สร้างคูปอง MEMBER50 (ทำทุกครั้งที่โหลด) ⭐️
+      const couponRef = db.collection('coupons').doc('MEMBER50');
+      const couponSnap = await couponRef.get();
+      if (!couponSnap.exists) {
+          console.log("Creating MEMBER50 coupon...");
+          await couponRef.set({
+              type: 'fixed',      // ส่วนลดแบบ-
+              value: 50,          // 50 บาท
+              quantityAvailable: 1000,  // 1000 สิทธิ์
+              quantityUsed: 0,
+              limitPerUser: 1       // 1 คน/1 ครั้ง
+          });
+      }
+      // ⭐️ [จบ] ⭐️
+
     }
     // --- (4) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันสร้างสินค้า ⭐️⭐️ ---
     
@@ -1296,23 +1383,59 @@
     function updateCart() { document.getElementById('cartCount').innerText=cart.reduce((a,b)=>a+b.qty,0); }
 
 
-    // --- (ฟังก์ชันคูปอง - เหมือนเดิม) ---
+    // ========== [START] ⭐️⭐️⭐️ ฟังก์ชันที่แก้ไข ⭐️⭐️⭐️ ==========
+
+    // --- (ฟังก์ชันคูปอง - [แก้ไขแล้ว - จำกัด N ครั้งต่อคน]) ---
     async function applyCoupon() {
       const codeInput = document.getElementById('couponInput');
       const code = codeInput.value.trim().toUpperCase();
       if (!code) return showToast('กรุณากรอกโค้ด', true);
+
+      // [คงเดิม] 1. ตรวจสอบว่า Login หรือยัง
+      if (userId.startsWith('guest_')) {
+        showToast('กรุณาเข้าสู่ระบบเพื่อใช้โค้ดส่วนลด', true);
+        return;
+      }
+      
       const btn = document.getElementById('couponBtn');
       btn.disabled = true; btn.innerText = 'รอ...';
+      
       try {
         const couponRef = db.collection('coupons').doc(code);
         const couponDoc = await couponRef.get();
+
         if (!couponDoc.exists) {
           showToast('โค้ดส่วนลดไม่ถูกต้อง', true);
           currentDiscount = { code: null, type: null, value: 0 };
         } else {
           const couponData = couponDoc.data();
-          showToast('ใช้โค้ดส่วนลดสำเร็จ!');
-          currentDiscount = { code: code, ...couponData };
+          
+          // [คงเดิม] 2. ตรวจสอบว่าโค้ดเต็มหรือยัง
+          if (couponData.quantityUsed >= couponData.quantityAvailable) {
+            showToast('โค้ดส่วนลดนี้ถูกใช้เต็มจำนวนแล้ว', true);
+            currentDiscount = { code: null, type: null, value: 0 };
+          } 
+          // [ใหม่] 3. ตรวจสอบว่าผู้ใช้คนนี้ใช้ครบโควต้าหรือยัง
+          else {
+            // 👈 [ใหม่] ดึงโควต้า (ถ้าไม่มีฟิลด์นี้ ให้ค่าเริ่มต้นเป็น 1)
+            const limitPerUser = couponData.limitPerUser || 1; 
+            const usageRef = couponRef.collection('usersWhoUsed').doc(userId);
+            const usageDoc = await usageRef.get();
+            
+            let currentUserUseCount = 0;
+            if (usageDoc.exists) {
+              currentUserUseCount = usageDoc.data().useCount || 0; // 👈 [ใหม่] อ่าน useCount
+            }
+
+            if (currentUserUseCount >= limitPerUser) { // 👈 [ใหม่] เช็คโควต้า
+              showToast('คุณได้ใช้โค้ดส่วนลดนี้ครบตามจำนวนครั้งที่กำหนดแล้ว', true);
+              currentDiscount = { code: null, type: null, value: 0 };
+            } else {
+              // [สำเร็จ] ถ้าผ่าน
+              showToast('ใช้โค้ดส่วนลดสำเร็จ!');
+              currentDiscount = { code: code, ...couponData };
+            }
+          }
         }
       } catch (e) {
         console.error("Error applying coupon:", e);
@@ -1320,7 +1443,7 @@
         currentDiscount = { code: null, type: null, value: 0 };
       } finally {
         btn.disabled = false; btn.innerText = 'ใช้โค้ด';
-        openCart(); 
+        openCart(); // คำนวณตะกร้าใหม่
       }
     }
 
@@ -1423,7 +1546,7 @@
     }
     
 
-    // --- (11) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ (confirmOrder) ⭐️⭐️ ---
+    // --- (11) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ (confirmOrder - จำกัด N ครั้งต่อคน) ⭐️⭐️ ---
     async function confirmOrder() {
       const n=document.getElementById('custName').value, p=document.getElementById('custPhone').value, a=document.getElementById('custAddress').value;
       const pm=document.querySelector('input[name="payment"]:checked').value;
@@ -1432,52 +1555,108 @@
 
       if(!n||!p||!a) return showToast('กรุณากรอกข้อมูลให้ครบ', true);
       if (pm === 'bank' && !bankName) return showToast('กรุณาเลือกธนาคาร', true);
+      
+      if (userId.startsWith('guest_')) {
+          showToast('เกิดข้อผิดพลาด: กรุณาเข้าสู่ระบบก่อน', true);
+          return;
+      }
 
       const btn=document.getElementById('confirmPayBtn'); btn.disabled=true; btn.innerText="กำลังบันทึก...";
       try {
-        // (11.1) JS: แก้ไข Transaction ให้ตัดสต็อกตามไซส์
+        // (11.1) JS: ตัดสต็อกสินค้า (ส่วนนี้เหมือนเดิม)
         await Promise.all(cart.map(i => db.runTransaction(async t => {
           const productRef = db.collection('products').doc(i.id);
           const d = await t.get(productRef);
           if(!d.exists) throw "สินค้าไม่พบ";
           
           const data = d.data();
-          const newSizeStockMap = data.sizeStock; // 1. ดึง Map สต็อกออกมา
-          
-          const oldSizeStock = newSizeStockMap[i.size] || 0; // 2. หาสต็อกของไซส์ที่สั่ง
+          const newSizeStockMap = data.sizeStock; 
+          const oldSizeStock = newSizeStockMap[i.size] || 0; 
           
           if (oldSizeStock < i.qty) {
              throw `สินค้า ${i.name} ไซส์ ${i.size} ไม่พอ`;
           }
 
-          newSizeStockMap[i.size] = oldSizeStock - i.qty; // 3. คำนวณสต็อกไซส์ใหม่
-          
-          const newTotalStock = data.totalStock - i.qty; // 4. คำนวณสต็อกรวมใหม่
+          newSizeStockMap[i.size] = oldSizeStock - i.qty; 
+          const newTotalStock = data.totalStock - i.qty; 
           const newSold = (data.sold || 0) + i.qty;
 
-          // 5. อัปเดตกลับเข้าไป
           t.update(productRef, {
-            sizeStock: newSizeStockMap, // 👈 อัปเดต Map ทั้งก้อน
-            totalStock: newTotalStock, // 👈 อัปเดตสต็อกรวม
+            sizeStock: newSizeStockMap, 
+            totalStock: newTotalStock, 
             sold: newSold
           });
         })));
         
-        // (11.2) JS: บันทึก Order (ส่วนนี้เหมือนเดิม)
-        await db.collection('orders').add({
-          customer:{name:n,phone:p,address:a}, 
-          items:cart,
-          subtotal: subtotalAmount,
-          discount: discountApplied,
-          coupon: currentDiscount.code || '-',
-          total: finalTotalAmount,
-          paymentMethod:pm, 
-          bank:pm==='bank'?bankName:'-', 
-          user:userId, 
-          status:'pending', 
-          timestamp:firebase.firestore.FieldValue.serverTimestamp()
-        });
+        // (11.2) JS: [แก้ไข] สร้าง Transaction สำหรับการสร้างออเดอร์ + ตัดสิทธิ์คูปอง
+        await db.runTransaction(async t => {
+          
+          // --- (A) ตรวจสอบและตัดสิทธิ์คูปอง (ถ้ามี) ---
+          if (currentDiscount.code) {
+            const couponRef = db.collection('coupons').doc(currentDiscount.code);
+            const couponDoc = await t.get(couponRef); 
+
+            if (!couponDoc.exists) throw "โค้ดส่วนลดไม่ถูกต้อง";
+            const couponData = couponDoc.data();
+
+            // 1. ตรวจสอบจำนวนรวม (เหมือนเดิม)
+            if (couponData.quantityUsed >= couponData.quantityAvailable) {
+              throw "ขออภัย โค้ดนี้ถูกใช้เต็มจำนวนแล้ว";
+            }
+            
+            // 2. [ใหม่] ตรวจสอบโควต้าผู้ใช้ (อีกครั้งใน Transaction)
+            const limitPerUser = couponData.limitPerUser || 1; // 👈 [ใหม่]
+            const usageRef = couponRef.collection('usersWhoUsed').doc(userId);
+            const usageDoc = await t.get(usageRef); // 👈 [ใหม่]
+            
+            let currentUserUseCount = 0;
+            if (usageDoc.exists) {
+              currentUserUseCount = usageDoc.data().useCount || 0;
+            }
+
+            if (currentUserUseCount >= limitPerUser) { // 👈 [ใหม่]
+              throw "คุณได้ใช้โค้ดส่วนลดนี้ครบตามจำนวนครั้งที่กำหนดแล้ว";
+            }
+            
+            // [สำเร็จ] ถ้าผ่านทั้งหมด:
+            // 1. ตัดยอดรวม
+            t.update(couponRef, { quantityUsed: firebase.firestore.FieldValue.increment(1) });
+            
+            // 2. [แก้ไข] บันทึก/อัปเดตยอดผู้ใช้
+            if (usageDoc.exists) {
+              // ถ้าเคยใช้แล้ว ให้อัปเดต (บวก 1)
+              t.update(usageRef, { 
+                useCount: firebase.firestore.FieldValue.increment(1),
+                lastUsedAt: firebase.firestore.FieldValue.serverTimestamp() 
+              });
+            } else {
+              // ถ้าใช้ครั้งแรก ให้สร้าง (ตั้งค่าเป็น 1)
+              t.set(usageRef, { 
+                useCount: 1, 
+                lastUsedAt: firebase.firestore.FieldValue.serverTimestamp() 
+              });
+            }
+          }
+          
+          // --- (B) สร้างออเดอร์ (เหมือนเดิม) ---
+          const newOrderRef = db.collection('orders').doc(); 
+          t.set(newOrderRef, {
+            customer:{name:n,phone:p,address:a}, 
+            items:cart,
+            subtotal: subtotalAmount,
+            discount: discountApplied,
+            coupon: currentDiscount.code || '-',
+            total: finalTotalAmount,
+            paymentMethod:pm, 
+            bank:pm==='bank'?bankName:'-', 
+            user:userId, 
+            status:'pending', 
+            timestamp:firebase.firestore.FieldValue.serverTimestamp()
+          });
+        }); // --- สิ้นสุด Transaction ---
+
         
+        // (11.3) JS: เคลียร์ค่าต่างๆ (ส่วนนี้เหมือนเดิม)
         sendMsgInternal(`[ระบบ] สั่งซื้อสำเร็จ ยอด ฿${finalTotalAmount}`);
         
         cart=[]; 
@@ -1486,16 +1665,26 @@
         
         updateCart();
         closeModal('paymentModal');
+        
+        // ⭐️ [แก้ไข] คืนค่า successModal ก่อนแสดง ⭐️
+        document.querySelector('#successModal .confirm-title').innerText = 'สั่งซื้อสำเร็จ!';
+        document.querySelector('#successModal .confirm-desc').innerText = 'ขอบคุณที่ใช้บริการ ทางเราจะจัดส่งสินค้าให้เร็วที่สุด';
+        document.getElementById('successModal').querySelector('.btn-ok').onclick = () => {
+             closeModal('successModal');
+        };
         document.getElementById('successModal').style.display = 'flex';
+        
       } catch(e){ 
         console.error("Order failed: ", e);
-        // (11.3) JS: แสดง Error ที่ชัดเจนขึ้น
         showToast(typeof e === 'string' ? e : 'เกิดข้อผิดพลาด', true); 
       } finally { 
         btn.disabled=false; btn.innerText="ยืนยันการสั่งซื้อ"; 
       }
     }
     // --- (11) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ ⭐️⭐️ ---
+
+    // ========== [END] ⭐️⭐️⭐️ ฟังก์ชันที่แก้ไข ⭐️⭐️⭐️ ==========
+
 
     
     // --- (ฟังก์ชันประวัติการสั่งซื้อ และ Chat) ---

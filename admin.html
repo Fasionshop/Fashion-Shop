@@ -3,120 +3,114 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Chat Dashboard</title>
+  <title>Admin Dashboard</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
-    /* 🔥 ใช้ฟอนต์ Mitr 🔥 */
+    /* (CSS ส่วนใหญ่เหมือนเดิม) */
     body { font-family: 'Mitr', sans-serif; margin: 0; display: flex; height: 100vh; background: #f0f2f5; font-size: 16px; }
-    
-    /* Sidebar */
     .sidebar { width: 320px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-    .sidebar-header { padding: 20px; background: #7A56D3; color: white; font-weight: 600; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; } /* 👈 เปลี่ยนสี */
-    .user-list { flex: 1; overflow-y: auto; }
-    
-    .user-item { 
-      padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; 
-      display: flex; align-items: center; gap: 12px; transition: 0.2s; 
+    .sidebar-header {
+      padding: 0; background: #7A56D3; color: white; font-weight: 600; 
+      display: flex; flex-direction: column; align-items: stretch; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10;
     }
-    .user-item:hover { background: #F3F0FF; } /* 👈 เปลี่ยนสี */
-    .user-item.active { background: #E9E4FF; border-left: 5px solid #7A56D3; } /* 👈 เปลี่ยนสี */
-    
-    .user-avatar { 
-      width: 45px; height: 45px; background: #eee; border-radius: 50%; 
-      display: flex; justify-content: center; align-items: center; 
-      color: #888; font-size: 1.2rem; flex-shrink: 0;
-      overflow: hidden; /* 🔥 [NEW] ซ่อนรูปที่ล้นขอบ */
-    }
-    .user-avatar-img { /* 🔥 [NEW] สไตล์สำหรับรูปโปรไฟล์ */
-      width: 100%; height: 100%; object-fit: cover;
-    }
+    .sidebar-header-top { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; }
+    .sidebar-tabs { display: flex; background: #6a4abf; }
+    .tab-btn { flex: 1; text-align: center; padding: 12px 10px; cursor: pointer; color: rgba(255,255,255,0.7); transition: 0.2s; font-weight: 500; border-bottom: 3px solid transparent; font-size: 0.95rem; }
+    .tab-btn:hover { background: rgba(0,0,0,0.1); }
+    .tab-btn.active { color: white; border-bottom: 3px solid #ffe13c; }
+    .user-list { flex: 1; overflow-y: auto; flex-direction: column; }
+    .user-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; }
+    .user-item:hover { background: #F3F0FF; }
+    .user-item.active { background: #E9E4FF; border-left: 5px solid #7A56D3; }
+    .user-avatar { width: 45px; height: 45px; background: #eee; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: #888; font-size: 1.2rem; flex-shrink: 0; overflow: hidden; }
+    .user-avatar-img { width: 100%; height: 100%; object-fit: cover; }
     .user-info { flex: 1; min-width: 0; }
     .user-name { font-weight: 600; color: #333; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .user-preview { font-size: 0.9rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .user-time { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
-    .blocked-tag { /* 🔥 [NEW] ป้าย 'ถูกบล็อค' */
-      font-size: 0.8rem;
-      color: #d93025;
-      font-weight: 600;
-      margin-left: 5px;
+    .blocked-tag { font-size: 0.8rem; color: #d93025; font-weight: 600; margin-left: 5px; }
+    .coupon-list { flex: 1; overflow-y: auto; display: none; }
+    .coupon-list-header {
+      padding: 15px;
+      background: #f9f9f9;
+      border-bottom: 1px solid #ddd;
+      display: flex; 
+      flex-direction: column; 
+      gap: 10px; 
     }
-
-    /* Chat Area */
-    .chat-area { flex: 1; display: flex; flex-direction: column; background: #fff; }
-    .chat-area-header { 
-      padding: 15px 20px; border-bottom: 1px solid #ddd; font-weight: 600; 
-      background: #f9f9f9; display: flex; align-items: center; 
-      justify-content: flex-start; /* 🔥 [CHANGED] จัดชิดซ้าย */
-      gap: 15px; /* 🔥 [NEW] เพิ่มระยะห่าง */
-    }
-    .header-avatar-container { /* 🔥 [NEW] ที่ใส่รูปโปรไฟล์ใน Header */
-      width: 40px; height: 40px; background: #eee; border-radius: 50%;
-      display: flex; justify-content: center; align-items: center;
-      font-size: 1.8rem; color: #ccc; overflow: hidden;
-      flex-shrink: 0;
-    }
-    .header-avatar-container img { /* 🔥 [NEW] รูปโปรไฟล์ใน Header */
-      width: 100%; height: 100%; object-fit: cover;
-    }
-    .block-btn { /* 🔥 [NEW] สไตล์ปุ่มบล็อค */
-      padding: 8px 15px;
-      border: none;
-      border-radius: 5px;
+    .reset-all-btn {
+      width: 100%;
       background: #d93025;
       color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 5px;
       cursor: pointer;
       font-family: 'Mitr', sans-serif;
+      font-size: 1rem;
       font-weight: 600;
-      font-size: 0.9rem;
       transition: 0.2s;
-      margin-left: auto; /* 🔥 [NEW] ดันไปทางขวา */
     }
+    .reset-all-btn:hover { background: #b0271e; }
+    .reset-all-btn:disabled { background: #ccc; }
+    .reset-all-login-claims-btn {
+      width: 100%;
+      background: #007bff; 
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: 'Mitr', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      transition: 0.2s;
+    }
+    .reset-all-login-claims-btn:hover { background: #0056b3; }
+    .reset-all-login-claims-btn:disabled { background: #ccc; }
+    .coupon-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .coupon-info { font-size: 0.9rem; }
+    .coupon-info strong { font-size: 1.1rem; color: #7A56D3; display: block; }
+    .reset-coupon-btn { background: #ff424f; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-family: 'Mitr', sans-serif; font-size: 0.9rem; transition: 0.2s; flex-shrink: 0; }
+    .reset-coupon-btn:hover { background: #d93025; }
+    .reset-coupon-btn:disabled { background: #ccc; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; background: #fff; }
+    .chat-area-header { padding: 15px 20px; border-bottom: 1px solid #ddd; font-weight: 600; background: #f9f9f9; display: flex; align-items: center; justify-content: flex-start; gap: 15px; }
+    .header-avatar-container { width: 40px; height: 40px; background: #eee; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; color: #ccc; overflow: hidden; flex-shrink: 0; }
+    .header-avatar-container img { width: 100%; height: 100%; object-fit: cover; }
+    .chat-header-actions { display: flex; gap: 10px; margin-left: auto; }
+    .reset-login-coupon-btn { padding: 8px 15px; border: none; border-radius: 5px; background: #007bff; color: white; cursor: pointer; font-family: 'Mitr', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
+    .reset-login-coupon-btn:hover { background: #0056b3; }
+    .block-btn { padding: 8px 15px; border: none; border-radius: 5px; background: #d93025; color: white; cursor: pointer; font-family: 'Mitr', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
     .block-btn:hover { background: #b0271e; }
-    .block-btn.is-blocked { /* 🔥 [NEW] สไตล์ปุ่มตอนปลดบล็อค */
-      background: #f0ad4e;
-    }
+    .block-btn.is-blocked { background: #f0ad4e; }
     .block-btn.is-blocked:hover { background: #df9e3c; }
-    
+    .delete-btn { padding: 8px 15px; border: none; border-radius: 5px; background: #6c757d; color: white; cursor: pointer; font-family: 'Mitr', sans-serif; font-weight: 600; font-size: 0.9rem; transition: 0.2s; }
+    .delete-btn:hover { background: #5a6268; }
     .messages-box { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 10px; }
-    
-    /* Input Area */
     .input-box { padding: 20px; border-top: 1px solid #ddd; display: flex; gap: 10px; background: #f0f0f0; }
-    /* 🔥 เปลี่ยนฟอนต์เป็น Mitr 🔥 */
     .input-box input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 25px; outline: none; padding-left: 20px; font-family: 'Mitr', sans-serif; font-size: 1rem; }
-    /* 🔥 เปลี่ยนฟอนต์เป็น Mitr 🔥 */
-    .input-box button { padding: 10px 25px; background: #7A56D3; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: 600; transition: 0.2s; font-family: 'Mitr', sans-serif; } /* 👈 เปลี่ยนสี */
-    .input-box button:hover { background: #5E42A6; } /* 👈 เปลี่ยนสี */
+    .input-box button { padding: 10px 25px; background: #7A56D3; color: white; border: none; border-radius: 25px; cursor: pointer; font-weight: 600; transition: 0.2s; font-family: 'Mitr', sans-serif; }
+    .input-box button:hover { background: #5E42A6; }
     .input-box button:disabled { background: #ccc; cursor: not-allowed; }
-
-    /* Message Bubbles */
     .msg { padding: 10px 15px; border-radius: 15px; max-width: 70%; word-wrap: break-word; line-height: 1.4; position: relative; animation: fadeIn 0.2s; font-size: 1rem; }
     @keyframes fadeIn { from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);} }
-    .msg-admin { background: #7A56D3; color: white; align-self: flex-end; border-bottom-right-radius: 2px; } /* 👈 เปลี่ยนสี */
+    .msg-admin { background: #7A56D3; color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
     .msg-user { background: #f1f1f1; color: #333; align-self: flex-start; border-bottom-left-radius: 2px; }
-    
     .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #ccc; }
     .empty-state i { font-size: 3rem; margin-bottom: 10px; }
     
-    /* 🔥 [NEW] CSS for Custom Confirm Modal */
+    /* (Modal CSS) */
     .modal { 
-      display: none; 
-      position: fixed; 
-      top: 0; left: 0; 
-      width: 100%; height: 100%; 
-      background: rgba(0,0,0,0.5); 
-      z-index: 1000; 
-      /* 🔥 [NEW] Changed to align center */
-      justify-content: center; 
-      align-items: center; 
+      display: none; position: fixed; top: 0; left: 0; 
+      width: 100%; height: 100%; background: rgba(0,0,0,0.5); 
+      z-index: 1000; justify-content: center; align-items: center; 
     }
     .confirm-modal-box { 
-      background: white; 
-      padding: 25px; 
-      border-radius: 10px; 
-      text-align: center; 
-      width: 90%; 
-      max-width: 350px; 
+      background: white; padding: 25px; border-radius: 10px; 
+      text-align: center; width: 90%; max-width: 350px; 
       animation: popIn 0.3s; 
     }
     @keyframes popIn { 
@@ -132,13 +126,28 @@
       border-radius: 5px; cursor: pointer; 
       font-family: 'Mitr'; font-weight: 600; 
     }
-    .btn-yes { 
-      /* 🔥 [MODIFIED] Hardcoded color */
-      background: #7A56D3; 
-      color: white; 
-    }
+    .btn-yes { background: #7A56D3; color: white; }
     .btn-no { background: #eee; color: #333; }
-    /* 🔥 [End of new CSS] */
+    
+    /* ⭐️ [ใหม่] CSS สำหรับปุ่ม "ตกลง" และสไตล์ Error ⭐️ */
+    .btn-ok { 
+      background: #4CAF50; 
+      color: white; 
+      width: 100%; 
+    }
+    .btn-ok:hover {
+      background: #45a049;
+    }
+    #alertModal.is-error .confirm-icon {
+      color: #d93025;
+    }
+    #alertModal.is-error .btn-ok {
+      background: #d93025;
+    }
+    #alertModal.is-error .btn-ok:hover {
+      background: #b0271e;
+    }
+    /* ⭐️ [จบ] ⭐️ */
 
   </style>
 </head>
@@ -146,12 +155,34 @@
 
   <div class="sidebar">
     <div class="sidebar-header">
-      <span><i class="fas fa-comments"></i> รายการแชท</span>
-      <small style="cursor:pointer; font-size:0.85rem; opacity:0.8;" onclick="location.reload()"><i class="fas fa-sync"></i> รีโหลด</small>
+      <div class="sidebar-header-top">
+        <span style="font-weight: 600; font-size: 1.1rem;">Admin Panel</span>
+        <small style="cursor:pointer; font-size:0.85rem; opacity:0.8;" onclick="location.reload()"><i class="fas fa-sync"></i> รีโหลด</small>
+      </div>
+      <div class="sidebar-tabs">
+          <div class="tab-btn active" onclick="switchAdminTab('chat', this)">
+              <i class="fas fa-comments"></i> แชท
+          </div>
+          <div class="tab-btn" onclick="switchAdminTab('coupons', this)">
+              <i class="fas fa-ticket-alt"></i> คูปอง
+          </div>
+      </div>
     </div>
-    <div class="user-list" id="userList">
+    <div class="user-list" id="userList" style="display: flex;">
       <div style="padding:20px; text-align:center; color:#999;">กำลังโหลดรายชื่อ...</div>
     </div>
+    
+    <div class="coupon-list" id="couponList">
+      <div class="coupon-list-header">
+          <button class="reset-all-login-claims-btn" id="resetAllLoginClaimsBtn" onclick="confirmResetAllLoginClaims()">
+              <i class="fas fa-gift"></i> รีเซ็ตสิทธิ์รับโค้ด (ทั้งหมด)
+          </button>
+          
+          <button class="reset-all-btn" id="resetAllBtn" onclick="confirmResetAllCoupons()">
+              <i class="fas fa-history"></i> รีเซ็ตประวัติใช้คูปอง (ทั้งหมด)
+          </button>
+      </div>
+      </div>
   </div>
 
   <div class="chat-area">
@@ -163,9 +194,18 @@
         <span id="chatHeaderName" style="display: block; line-height: 1.2;">กรุณาเลือกแชทเพื่อเริ่มสนทนา</span>
         <span id="chatHeaderId" style="font-size:0.9rem; color:#999; font-weight:normal;"></span>
       </div>
-      <button id="blockBtn" onclick="toggleBlockUser()" style="display: none;" class="block-btn">
-        <i class="fas fa-ban"></i> บล็อค
-      </button>
+      
+      <div class="chat-header-actions" id="chatActions" style="display: none;">
+        <button id="resetLoginCouponBtn" onclick="confirmResetLoginCoupon()" class="reset-login-coupon-btn">
+            <i class="fas fa-ticket-alt"></i> รีเซ็ตโค้ด (คนนี้)
+        </button>
+        <button id="blockBtn" onclick="toggleBlockUser()" class="block-btn">
+          <i class="fas fa-ban"></i> บล็อค
+        </button>
+        <button id="deleteBtn" onclick="confirmDeleteChat()" class="delete-btn">
+          <i class="fas fa-trash-alt"></i> ลบแชท
+        </button>
+      </div>
     </div>
     <div class="messages-box" id="messagesBox">
       <div class="empty-state">
@@ -190,12 +230,24 @@
       </div>
     </div>
   </div>
-
+  
+  <div id="alertModal" class="modal" style="align-items: center;">
+    <div class="confirm-modal-box">
+      <div id="alertIcon" class="confirm-icon">✅</div>
+      <div id="alertTitle" class="confirm-title">สำเร็จ!</div>
+      <div id="alertDesc" class="confirm-desc">การดำเนินการเสร็จสมบูรณ์</div>
+      <div class="confirm-actions">
+        <button class="btn-confirm-action btn-ok" onclick="closeModal('alertModal')">ตกลง</button>
+      </div>
+    </div>
+  </div>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+
 
   <script>
-    // --- (Firebase Config) ---
+    // --- (Firebase Config ... เหมือนเดิม) ---
     const firebaseConfig = {
       apiKey: "AIzaSyA7lELq82KxJ0sFDf6jKmWPDFKpKqHJp0c",
       authDomain: "king007-c72e2.firebaseapp.com",
@@ -208,23 +260,21 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth(); 
 
+    // (Global Variables ... เหมือนเดิม)
     let currentChatId = null;
     let unsubscribeMsg = null;
     let currentUserData = null; 
-    let confirmAction = null; // 🔥 [NEW] Store the confirm action
+    let confirmAction = null;
+    let unsubscribeCoupons = null;
 
-    db.collection('chats').onSnapshot(snapshot => {
+    // (ฟังก์ชันโหลดแชท ... เหมือนเดิม)
+    db.collection('chats').orderBy('lastActive', 'desc').onSnapshot(snapshot => {
       const userList = document.getElementById('userList');
       const users = [];
       snapshot.forEach(doc => { users.push({ id: doc.id, ...doc.data() }); });
       
-      users.sort((a, b) => {
-        const timeA = a.lastActive ? a.lastActive.seconds : 0;
-        const timeB = b.lastActive ? b.lastActive.seconds : 0;
-        return timeB - timeA;
-      });
-
       if (currentChatId) {
         const updatedCurrentUserData = users.find(u => u.id === currentChatId);
         if (updatedCurrentUserData) {
@@ -232,6 +282,8 @@
           updateBlockButtonState(currentUserData.isBlocked); 
           document.getElementById('adminInput').disabled = currentUserData.isBlocked || false;
           document.getElementById('sendBtn').disabled = currentUserData.isBlocked || false;
+        } else {
+            resetChatUI();
         }
       }
       
@@ -253,11 +305,7 @@
         }
         
         const displayName = u.displayName || (u.email ? u.email.split('@')[0] : `Guest (${u.id.substr(0,4)})`);
-        
-        const avatarImg = u.photoURL 
-            ? `<img src="${u.photoURL}" class="user-avatar-img">` 
-            : `<i class="fas fa-user"></i>`;
-            
+        const avatarImg = u.photoURL ? `<img src="${u.photoURL}" class="user-avatar-img">` : `<i class="fas fa-user"></i>`;
         const blockedIndicator = u.isBlocked ? '<span class="blocked-tag">(ถูกบล็อค)</span>' : '';
 
         div.innerHTML = `
@@ -274,31 +322,40 @@
       });
     });
 
+    // (ฟังก์ชัน selectChat ... เหมือนเดิม)
     function selectChat(u, element) { 
+      if (document.getElementById('userList').style.display === 'none') {
+          document.getElementById('userList').style.display = 'flex';
+          document.getElementById('couponList').style.display = 'none';
+          const tabs = document.querySelectorAll('.tab-btn');
+          if (tabs.length > 1) {
+              tabs[0].classList.add('active');
+              tabs[1].classList.remove('active');
+          }
+      }
       currentChatId = u.id;
       currentUserData = u; 
-      
       document.querySelectorAll('.user-item').forEach(e => e.classList.remove('active'));
       element.classList.add('active');
-
       const avatarHeader = document.getElementById('chatHeaderAvatar');
       if (u.photoURL) {
         avatarHeader.innerHTML = `<img src="${u.photoURL}" alt="avatar">`;
       } else {
         avatarHeader.innerHTML = `<i class="fas fa-user-circle" style="font-size: 1.8rem; color: #ccc;"></i>`;
       }
-
       const displayName = u.displayName || (u.email ? u.email.split('@')[0] : `Guest (${u.id.substr(0,4)})`);
       document.getElementById('chatHeaderName').innerText = displayName;
       document.getElementById('chatHeaderId').innerText = `(ID: ${u.id})`;
-      
-      const blockBtn = document.getElementById('blockBtn');
-      blockBtn.style.display = 'inline-block';
+      document.getElementById('chatActions').style.display = 'flex'; 
       updateBlockButtonState(u.isBlocked);
-      
+      const resetLoginBtn = document.getElementById('resetLoginCouponBtn');
+      if (u.id.startsWith('guest_')) {
+          resetLoginBtn.style.display = 'none';
+      } else {
+          resetLoginBtn.style.display = 'block';
+      }
       document.getElementById('adminInput').disabled = u.isBlocked || false;
       document.getElementById('sendBtn').disabled = u.isBlocked || false;
-
       if(unsubscribeMsg) unsubscribeMsg();
       const box = document.getElementById('messagesBox');
       unsubscribeMsg = db.collection('chats').doc(u.id).collection('messages')
@@ -320,13 +377,15 @@
         });
     }
 
+    // ⭐️ [แก้ไข] ฟังก์ชัน sendReply (เปลี่ยน alert) ⭐️
     function sendReply() {
       const inp = document.getElementById('adminInput');
       const txt = inp.value.trim();
       if(!txt || !currentChatId) return;
       
       if (currentUserData && currentUserData.isBlocked) {
-        alert("ไม่สามารถส่งข้อความได้ ผู้ใช้นี้ถูกบล็อค");
+        // 👈 [เปลี่ยน]
+        showAlert("ส่งข้อความไม่ได้", "ไม่สามารถส่งข้อความได้ ผู้ใช้นี้ถูกบล็อค", true);
         return;
       }
       
@@ -342,35 +401,46 @@
 
     function handleEnter(e) { if(e.key === 'Enter') sendReply(); }
     
-    // 🔥 --- [NEW] ฟังก์ชันสำหรับ Custom Modal --- 🔥
-    
-    /** ปิด Modal */
+    // (ฟังก์ชัน Modal Yes/No ... เหมือนเดิม)
     function closeModal(id) {
       document.getElementById(id).style.display = 'none';
-      confirmAction = null; // เคลียร์ action ทุกครั้งที่ปิด
+      confirmAction = null; 
     }
-
-    /** แสดง Modal */
     function showConfirmModal(title, desc, icon, onConfirm) {
       document.getElementById('confirmTitle').innerText = title;
       document.getElementById('confirmDesc').innerText = desc;
       document.getElementById('confirmIcon').innerHTML = icon;
-      
-      // 1. เก็บฟังก์ชันที่จะรันไว้ในตัวแปร
       confirmAction = () => {
-        onConfirm(); // รันฟังก์ชันที่ส่งเข้ามา
-        closeModal('confirmModal'); // ปิด Modal
+        onConfirm(); 
+        closeModal('confirmModal'); 
       };
-      
-      // 2. ตั้งค่าให้ปุ่ม "ยืนยัน" เรียกใช้ confirmAction
       document.getElementById('btnConfirmAction').onclick = confirmAction;
-      
-      // 3. แสดง Modal
       document.getElementById('confirmModal').style.display = 'flex';
     }
+    
+    // ⭐️ [ใหม่] ฟังก์ชันสำหรับ Modal Alert (OK) ⭐️
+    function showAlert(title, desc, isError = false) {
+        const modal = document.getElementById('alertModal');
+        const iconEl = document.getElementById('alertIcon');
+        const titleEl = document.getElementById('alertTitle');
+        const descEl = document.getElementById('alertDesc');
+        
+        titleEl.innerText = title;
+        descEl.innerText = desc;
+        
+        if (isError) {
+            iconEl.innerHTML = '🚫';
+            modal.classList.add('is-error');
+        } else {
+            iconEl.innerHTML = '✅';
+            modal.classList.remove('is-error');
+        }
+        
+        modal.style.display = 'flex';
+    }
+    // ⭐️ [จบ] ⭐️
 
-
-    /** อัปเดตหน้าตาปุ่มบล็อค */
+    // (ฟังก์ชัน updateBlockButtonState ... เหมือนเดิม)
     function updateBlockButtonState(isBlocked) {
       const blockBtn = document.getElementById('blockBtn');
       if (isBlocked) {
@@ -381,52 +451,380 @@
         blockBtn.classList.remove('is-blocked');
       }
     }
-
-    /** 🔥 [MODIFIED] สลับสถานะ บล็อค/ปลดบล็อค (ใช้ Modal) */
+    
+    // ⭐️ [แก้ไข] ฟังก์ชัน toggleBlockUser (เปลี่ยน alert) ⭐️
     async function toggleBlockUser() {
       if (!currentChatId || !currentUserData) return;
-
-      const newBlockedState = !currentUserData.isBlocked; // สลับสถานะ
+      const newBlockedState = !currentUserData.isBlocked; 
       const actionText = newBlockedState ? 'บล็อค' : 'ปลดบล็อค';
       const displayName = currentUserData.displayName || (currentUserData.email ? currentUserData.email.split('@')[0] : 'ผู้ใช้นี้');
       
-      // 🔥 [NEW] 1. สร้างฟังก์ชันการทำงานหลัก (ที่จะรันหลังกดยืนยัน)
       const doBlockLogic = async () => {
         try {
-          // อัปเดตสถานะใน Firestore
           await db.collection('chats').doc(currentChatId).set({
             isBlocked: newBlockedState
           }, { merge: true });
-
-          // อัปเดต UI ทันที
-          currentUserData.isBlocked = newBlockedState; // อัปเดต state ในเครื่อง
+          currentUserData.isBlocked = newBlockedState; 
           updateBlockButtonState(newBlockedState);
           document.getElementById('adminInput').disabled = newBlockedState;
           document.getElementById('sendBtn').disabled = newBlockedState;
-
-          // (ทางเลือก) ส่งข้อความระบบแจ้งในแชท
           const adminMsg = newBlockedState ? 'แอดมินได้บล็อคผู้ใช้นี้' : 'แอดมินได้ปลดบล็อคผู้ใช้นี้';
           db.collection('chats').doc(currentChatId).collection('messages').add({
             text: `[ระบบ] ${adminMsg}`,
             sender: 'admin',
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
           });
-
         } catch (err) {
           console.error("Error toggling block state: ", err);
-          alert(`เกิดข้อผิดพลาดในการ ${actionText}`);
+          // 👈 [เปลี่ยน]
+          showAlert(`เกิดข้อผิดพลาด`, `เกิดข้อผิดพลาดในการ ${actionText}`, true);
         }
       };
-      
-      // 🔥 [NEW] 2. เรียก Custom Modal ขึ้นมาถาม
       showConfirmModal(
-        `ยืนยันการ ${actionText}`, // Title
-        `คุณต้องการ ${actionText} ผู้ใช้ ${displayName} ใช่หรือไม่?`, // Description
-        newBlockedState ? '🚫' : '✅', // Icon
-        doBlockLogic // ฟังก์ชันที่จะรันเมื่อกดยืนยัน
+        `ยืนยันการ ${actionText}`, 
+        `คุณต้องการ ${actionText} ผู้ใช้ ${displayName} ใช่หรือไม่?`, 
+        newBlockedState ? '🚫' : '✅', 
+        doBlockLogic 
       );
     }
     
+    // (ฟังก์ชัน confirmResetLoginCoupon ... เหมือนเดิม)
+    function confirmResetLoginCoupon() {
+        if (!currentChatId || !currentUserData || currentChatId.startsWith('guest_')) return;
+        
+        const displayName = currentUserData.displayName || (currentUserData.email ? currentUserData.email.split('@')[0] : 'ผู้ใช้นี้');
+        
+        showConfirmModal(
+            '🎟️ รีเซ็ตโค้ด Login?',
+            `คุณต้องการรีเซ็ตสิทธิ์การรับโค้ด MEMBER50 ให้กับ ${displayName} หรือไม่? (ผู้ใช้จะกดรับโค้ดนี้ได้อีกครั้ง)`,
+            '🎟️',
+            resetLoginCoupon
+        );
+    }
+
+    // ⭐️ [แก้ไข] ฟังก์ชัน resetLoginCoupon (เปลี่ยน alert) ⭐️
+    async function resetLoginCoupon() {
+        if (!currentChatId) return;
+        
+        try {
+            await db.collection('users').doc(currentChatId).set({
+                hasClaimedMemberCoupon: false
+            }, { merge: true });
+
+            db.collection('chats').doc(currentChatId).collection('messages').add({
+                text: `[ระบบ] แอดมินได้รีเซ็ตสิทธิ์การรับโค้ด Login (MEMBER50) ให้คุณแล้ว`,
+                sender: 'admin',
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // 👈 [เปลี่ยน]
+            showAlert('รีเซ็ตสิทธิ์เรียบร้อย', 'ผู้ใช้สามารถกดรับโค้ด MEMBER50 ได้อีกครั้ง');
+
+        } catch (err) {
+            console.error("Error resetting login coupon:", err);
+            // 👈 [เปลี่ยน]
+            showAlert('เกิดข้อผิดพลาด', err.message, true);
+        }
+    }
+
+    // (ฟังก์ชัน switchAdminTab ... เหมือนเดิม)
+    function switchAdminTab(tabName, element) {
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        element.classList.add('active');
+
+        if (tabName === 'chat') {
+            document.getElementById('userList').style.display = 'flex';
+            document.getElementById('couponList').style.display = 'none';
+            if (unsubscribeCoupons) unsubscribeCoupons(); 
+        } else if (tabName === 'coupons') {
+            document.getElementById('userList').style.display = 'none';
+            document.getElementById('couponList').style.display = 'block';
+            loadCoupons(); 
+        }
+    }
+    
+    // (ฟังก์ชัน loadCoupons ... เหมือนเดิม)
+    function loadCoupons() {
+        const listEl = document.getElementById('couponList');
+        
+        let itemsContainer = document.getElementById('couponItemsContainer');
+        if (!itemsContainer) {
+            itemsContainer = document.createElement('div');
+            itemsContainer.id = 'couponItemsContainer';
+            listEl.appendChild(itemsContainer);
+        }
+        
+        itemsContainer.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">กำลังโหลดคูปอง...</div>';
+        
+        if (unsubscribeCoupons) unsubscribeCoupons(); 
+
+        unsubscribeCoupons = db.collection('coupons').onSnapshot(snapshot => {
+            if (snapshot.empty) {
+                itemsContainer.innerHTML = '<div style="padding:30px; text-align:center; color:#ccc;">ไม่พบคูปอง (ไปสร้างที่ Firestore)</div>';
+                return;
+            }
+
+            itemsContainer.innerHTML = ''; 
+            snapshot.forEach(doc => {
+                const coupon = doc.data();
+                const couponId = doc.id;
+                
+                const div = document.createElement('div');
+                div.className = 'coupon-item';
+                
+                const usage = `${coupon.quantityUsed || 0} / ${coupon.quantityAvailable || 'N/A'}`;
+                const limit = coupon.limitPerUser || 1;
+                
+                div.innerHTML = `
+                    <div class="coupon-info">
+                        <strong>${couponId}</strong>
+                        <span>สิทธิ์คงเหลือ: ${usage}</span>
+                        <small style="display: block; color: #888;">(1 คนใช้ได้ ${limit} ครั้ง)</small>
+                    </div>
+                    <button class="reset-coupon-btn" id="reset-${couponId}" onclick="confirmResetCoupon('${couponId}')">
+                        <i class="fas fa-history"></i> รีเซ็ต
+                    </button>
+                `;
+                itemsContainer.appendChild(div);
+            });
+        }, err => {
+            console.error("Error loading coupons:", err);
+            itemsContainer.innerHTML = '<div style="padding:30px; text-align:center; color:red;">โหลดคูปองล้มเหลว</div>';
+        });
+    }
+
+    // (ฟังก์ชัน confirmResetCoupon ... เหมือนเดิม)
+    function confirmResetCoupon(couponId) {
+        showConfirmModal(
+            'ยืนยันการรีเซ็ตคูปอง',
+            `คุณต้องการรีเซ็ตคูปอง "${couponId}" ใช่หรือไม่? (จำนวนการใช้ทั้งหมดจะกลายเป็น 0 และทุกคนจะใช้ได้อีกครั้ง)`,
+            '⚠️',
+            () => { 
+                resetCoupon(couponId);
+            }
+        );
+    }
+    
+    // ⭐️ [แก้ไข] ฟังก์ชัน resetCoupon (เปลี่ยน alert) ⭐️
+    async function resetCoupon(couponId) {
+        const btn = document.getElementById(`reset-${couponId}`);
+        if(btn) btn.disabled = true;
+
+        try {
+            const couponRef = db.collection('coupons').doc(couponId);
+            
+            await couponRef.update({
+                quantityUsed: 0
+            });
+
+            const usageRef = couponRef.collection('usersWhoUsed');
+            const snapshot = await usageRef.get();
+            
+            if (!snapshot.empty) {
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => {
+                    batch.delete(doc.ref);
+                });
+                await batch.commit();
+            }
+            
+            console.log(`Coupon ${couponId} has been reset.`);
+            // 👈 [ใหม่] เพิ่ม Alert สำเร็จ
+            showAlert('รีเซ็ตสำเร็จ', `คูปอง ${couponId} ถูกรีเซ็ตเรียบร้อย`);
+
+        } catch (err) {
+            console.error("Error resetting coupon:", err);
+            // 👈 [เปลี่ยน]
+            showAlert('เกิดข้อผิดพลาด', `เกิดข้อผิดพลาดในการรีเซ็ต: ${err.message}`, true);
+        } finally {
+            if(btn) btn.disabled = false;
+        }
+    }
+
+    // (ฟังก์ชัน confirmResetAllCoupons ... เหมือนเดิม)
+    function confirmResetAllCoupons() {
+        showConfirmModal(
+            '🔥 ยืนยันการรีเซ็ตคูปองทั้งหมด? 🔥',
+            `คุณต้องการรีเซ็ตคูปอง *ทั้งหมด* ในระบบใช่หรือไม่? การดำเนินการนี้จะล้างประวัติการใช้งานของ *ทุกคน* และคืนสิทธิ์ให้ *ทุกโค้ด* (ไม่สามารถกู้คืนได้)`,
+            '🔥',
+            resetAllCoupons
+        );
+    }
+
+    // ⭐️ [แก้ไข] ฟังก์ชัน resetAllCoupons (เปลี่ยน alert) ⭐️
+    async function resetAllCoupons() {
+        const btn = document.getElementById('resetAllBtn');
+        btn.disabled = true;
+        btn.innerText = 'กำลังรีเซ็ต...';
+
+        try {
+            const couponsSnapshot = await db.collection('coupons').get();
+            if (couponsSnapshot.empty) {
+                // 👈 [เปลี่ยน]
+                showAlert('ไม่พบคูปอง', 'ไม่พบคูปองในระบบ', true);
+                return;
+            }
+
+            let resetCount = 0;
+            await Promise.all(couponsSnapshot.docs.map(async (doc) => {
+                const couponId = doc.id;
+                console.log(`Resetting ${couponId}...`);
+                
+                const couponRef = db.collection('coupons').doc(couponId);
+                const usageRef = couponRef.collection('usersWhoUsed');
+                const usageSnapshot = await usageRef.get();
+                const batch = db.batch();
+                batch.update(couponRef, { quantityUsed: 0 });
+                if (!usageSnapshot.empty) {
+                    usageSnapshot.docs.forEach(usageDoc => {
+                        batch.delete(usageDoc.ref);
+                    });
+                }
+                await batch.commit();
+                resetCount++;
+            }));
+
+            // 👈 [เปลี่ยน]
+            showAlert('รีเซ็ตสำเร็จ', `รีเซ็ตคูปองทั้งหมด ${resetCount} รายการเรียบร้อย!`);
+
+        } catch (err) {
+            console.error("Error resetting all coupons:", err);
+            // 👈 [เปลี่ยน]
+            showAlert('เกิดข้อผิดพลาด', err.message, true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'รีเซ็ตประวัติใช้คูปอง (ทั้งหมด)';
+        }
+    }
+    
+    // (ฟังก์ชัน confirmResetAllLoginClaims ... เหมือนเดิม)
+    function confirmResetAllLoginClaims() {
+        showConfirmModal(
+            '🎁 รีเซ็ตสิทธิ์รับโค้ดทั้งหมด?',
+            `คุณต้องการให้ผู้ใช้ *ทุกคน* สามารถกลับไปกดปุ่ม "รับโค้ดส่วนลดสมาชิก" (MEMBER50) ได้ *ใหม่* ใช่หรือไม่? (จะรีเซ็ตเฉพาะคนที่เคยกดรับไปแล้ว)`,
+            '🎁',
+            resetAllLoginClaims
+        );
+    }
+
+    // ⭐️ [แก้ไข] ฟังก์ชัน resetAllLoginClaims (เปลี่ยน alert) ⭐️
+    async function resetAllLoginClaims() {
+        const btn = document.getElementById('resetAllLoginClaimsBtn');
+        btn.disabled = true;
+        btn.innerText = 'กำลังรีเซ็ตสิทธิ์...';
+
+        try {
+            const usersQuery = db.collection('users').where('hasClaimedMemberCoupon', '==', true);
+            const snapshot = await usersQuery.get();
+
+            if (snapshot.empty) {
+                // 👈 [เปลี่ยน]
+                showAlert('ไม่พบข้อมูล', 'ไม่พบผู้ใช้ที่ต้องรีเซ็ต (ทุกคนยังสามารถกดรับได้อยู่แล้ว)');
+                return;
+            }
+            
+            console.log(`พบผู้ใช้ ${snapshot.size} คน ที่ต้องรีเซ็ต...`);
+            
+            let batch = db.batch();
+            let commitPromises = [];
+            let i = 0;
+
+            for (const doc of snapshot.docs) {
+                batch.update(doc.ref, { hasClaimedMemberCoupon: false });
+                i++;
+                if (i % 499 === 0) {
+                    console.log(`กำลัง commit batch ที่ ${i}...`);
+                    commitPromises.push(batch.commit());
+                    batch = db.batch();
+                }
+            }
+            commitPromises.push(batch.commit());
+            await Promise.all(commitPromises);
+
+            // 👈 [เปลี่ยน]
+            showAlert('รีเซ็ตสิทธิ์สำเร็จ', `รีเซ็ตสิทธิ์การรับโค้ดให้ผู้ใช้ ${snapshot.size} คน เรียบร้อย!`);
+
+        } catch (err) {
+            console.error("Error resetting all login claims:", err);
+            // 👈 [เปลี่ยน]
+            showAlert('เกิดข้อผิดพลาด', err.message, true);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'รีเซ็ตสิทธิ์รับโค้ด (ทั้งหมด)';
+        }
+    }
+    
+    // (ฟังก์ชัน resetChatUI, confirmDeleteChat ... เหมือนเดิม)
+    function resetChatUI() {
+        currentChatId = null; currentUserData = null;
+        if (unsubscribeMsg) unsubscribeMsg(); unsubscribeMsg = null;
+        document.getElementById('messagesBox').innerHTML = `<div class="empty-state"><i class="far fa-comment-dots"></i><p>ยังไม่ได้เลือกรายการแชท</p></div>`;
+        document.getElementById('chatHeaderName').innerText = 'กรุณาเลือกแชทเพื่อเริ่มสนทนา';
+        document.getElementById('chatHeaderId').innerText = '';
+        document.getElementById('chatActions').style.display = 'none'; 
+        document.getElementById('adminInput').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+        document.querySelectorAll('.user-item').forEach(e => e.classList.remove('active'));
+    }
+    function confirmDeleteChat() {
+        if (!currentChatId || !currentUserData) return;
+        const displayName = currentUserData.displayName || (currentUserData.email ? currentUserData.email.split('@')[0] : 'ผู้ใช้นี้');
+        showConfirmModal( '🗑️ ยืนยันการลบแชท', `คุณต้องการลบแชทของ ${displayName} ใช่หรือไม่? การดำเนินการนี้จะลบข้อความทั้งหมด *ถาวร* ทั้งฝั่งผู้ใช้และแอดมิน และไม่สามารถกู้คืนได้`, '🗑️', deleteChat );
+    }
+
+    // ⭐️ [แก้ไข] ฟังก์ชัน deleteChat (เปลี่ยน alert) ⭐️
+    async function deleteChat() {
+        if (!currentChatId) return;
+        
+        const chatIdToDelete = currentChatId;
+        const chatDisplayName = currentUserData.displayName || 'แชท';
+
+        resetChatUI(); 
+
+        try {
+            console.log(`กำลังเริ่มลบแชท: ${chatIdToDelete}`);
+            const messagesRef = db.collection('chats').doc(chatIdToDelete).collection('messages');
+            
+            await deleteCollection(messagesRef, 500);
+            await db.collection('chats').doc(chatIdToDelete).delete();
+
+            console.log(`แชท ${chatIdToDelete} (${chatDisplayName}) ถูกลบแล้ว`);
+            // 👈 [ใหม่] เพิ่ม Alert สำเร็จ
+            showAlert('ลบแชทสำเร็จ', `แชทของ ${chatDisplayName} ถูกลบออกจากระบบแล้ว`);
+
+        } catch (err) {
+            console.error("Error deleting chat:", err);
+            // 👈 [เปลี่ยน]
+            showAlert('ลบแชทล้มเหลว', err.message, true);
+        }
+    }
+
+    // (ฟังก์ชัน deleteCollection, deleteQueryBatch ... เหมือนเดิม)
+    async function deleteCollection(collectionRef, batchSize) {
+        const query = collectionRef.limit(batchSize);
+        return new Promise((resolve, reject) => {
+            deleteQueryBatch(query, resolve, reject);
+        });
+    }
+    async function deleteQueryBatch(query, resolve, reject) {
+        try {
+            const snapshot = await query.get();
+            if (snapshot.size === 0) {
+                return resolve();
+            }
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            setTimeout(() => {
+                deleteQueryBatch(query, resolve, reject);
+            }, 0);
+        } catch (err) {
+            reject(err);
+        }
+    }
+
   </script>
 </body>
 </html>
