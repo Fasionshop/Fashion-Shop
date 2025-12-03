@@ -284,6 +284,26 @@
       text-decoration: line-through; /* ขีดฆ่า */
     }
 
+    /* ⭐️ [START] 2. เพิ่ม CSS สำหรับปุ่มคูปอง ⭐️ */
+    .coupon-btn-item {
+      background: #fdf8e6;
+      border: 1px dashed #e6c06a;
+      color: #b8860b;
+      padding: 5px 12px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: 'Mitr', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: 0.2s;
+    }
+    .coupon-btn-item:hover {
+      background: #fbf2d3;
+      border-color: #d9a941;
+      transform: translateY(-1px);
+    }
+    /* ⭐️ [END] 2. จบส่วนที่เพิ่ม ⭐️ */
+
     /* --- (CSS ใหม่สำหรับปุ่มตัวเลือก) --- */
     .msg-options {
       display: flex;
@@ -428,6 +448,13 @@
       <span class="close-btn" onclick="closeModal('cartModal')">&times;</span>
       <h2>🛒 ตระกร้าสินค้า</h2>
       <div id="cartItemsContainer"><p>ยังไม่มีสินค้าในตระกร้า</p></div>
+
+      <div id="availableCouponsContainer" style="margin-top: 20px; display: none; flex-direction: column; gap: 8px; border-bottom: 1px dashed #ddd; padding-bottom: 15px;">
+        <label style="font-weight: 600; color: #555; font-size: 0.95rem;">🎁 โค้ดส่วนลดที่มีให้ใช้:</label>
+        <div id="couponButtonList" style="display: flex; flex-wrap: wrap; gap: 8px;">
+        </div>
+      </div>
+      
       <div class="coupon-box" style="margin-top: 15px; display:flex; gap:10px;">
         <input type="text" id="couponInput" class="form-control" placeholder="กรอกโค้ดส่วนลด" style="margin:0; font-family:'Mitr';">
         <button id="couponBtn" onclick="applyCoupon()" style="width:auto; padding: 0 20px; font-size: 1rem; margin:0; font-family:'Mitr';">ใช้โค้ด</button>
@@ -1491,18 +1518,28 @@
 
     // ========== [START] ⭐️⭐️⭐️ ฟังก์ชันที่แก้ไข ⭐️⭐️⭐️ ==========
 
-    // --- (ฟังก์ชันคูปอง - [แก้ไขแล้ว - จำกัด N ครั้งต่อคน]) ---
+    // ⭐️⭐️ [START] 1. แก้ไขฟังก์ชัน applyCoupon ⭐️⭐️
     async function applyCoupon() {
       const codeInput = document.getElementById('couponInput');
       const code = codeInput.value.trim().toUpperCase();
       if (!code) return showToast('กรุณากรอกโค้ด', true);
 
-      // [คงเดิม] 1. ตรวจสอบว่า Login หรือยัง
+      // [Check 1] ตรวจสอบว่า Login หรือยัง
       if (userId.startsWith('guest_')) {
         showToast('กรุณาเข้าสู่ระบบเพื่อใช้โค้ดส่วนลด', true);
         return;
       }
       
+      // ⭐️ [Check 2 - ใหม่!] ตรวจสอบว่ากดรับโค้ดสมาชิกหรือยัง ⭐️
+      // (currentUserData.hasClaimedMemberCoupon จะเป็น true ถ้าเคยกดรับแล้ว)
+      if (currentUserData.hasClaimedMemberCoupon === false) {
+          showToast('กรุณากด "รับโค้ดส่วนลดสมาชิก" ในหน้าโปรไฟล์ก่อน', true);
+          return; // หยุดการทำงาน
+      }
+      // ⭐️ [จบส่วนที่เพิ่ม] ⭐️
+
+      
+      // [Check 3] (โค้ดเดิม) ตรวจสอบคูปอง
       const btn = document.getElementById('couponBtn');
       btn.disabled = true; btn.innerText = 'รอ...';
       
@@ -1516,28 +1553,24 @@
         } else {
           const couponData = couponDoc.data();
           
-          // [คงเดิม] 2. ตรวจสอบว่าโค้ดเต็มหรือยัง
           if (couponData.quantityUsed >= couponData.quantityAvailable) {
             showToast('โค้ดส่วนลดนี้ถูกใช้เต็มจำนวนแล้ว', true);
             currentDiscount = { code: null, type: null, value: 0 };
           } 
-          // [ใหม่] 3. ตรวจสอบว่าผู้ใช้คนนี้ใช้ครบโควต้าหรือยัง
           else {
-            // 👈 [ใหม่] ดึงโควต้า (ถ้าไม่มีฟิลด์นี้ ให้ค่าเริ่มต้นเป็น 1)
             const limitPerUser = couponData.limitPerUser || 1; 
             const usageRef = couponRef.collection('usersWhoUsed').doc(userId);
             const usageDoc = await usageRef.get();
             
             let currentUserUseCount = 0;
             if (usageDoc.exists) {
-              currentUserUseCount = usageDoc.data().useCount || 0; // 👈 [ใหม่] อ่าน useCount
+              currentUserUseCount = usageDoc.data().useCount || 0; 
             }
 
-            if (currentUserUseCount >= limitPerUser) { // 👈 [ใหม่] เช็คโควต้า
+            if (currentUserUseCount >= limitPerUser) { 
               showToast('คุณได้ใช้โค้ดส่วนลดนี้ครบตามจำนวนครั้งที่กำหนดแล้ว', true);
               currentDiscount = { code: null, type: null, value: 0 };
             } else {
-              // [สำเร็จ] ถ้าผ่าน
               showToast('ใช้โค้ดส่วนลดสำเร็จ!');
               currentDiscount = { code: code, ...couponData };
             }
@@ -1552,9 +1585,89 @@
         openCart(); // คำนวณตะกร้าใหม่
       }
     }
+    // ⭐️⭐️ [END] 1. จบฟังก์ชัน applyCoupon ⭐️⭐️
 
-    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน openCart() ⭐️⭐️
+
+    // ⭐️⭐️ [START] 2. แก้ไขฟังก์ชัน loadAvailableCoupons ⭐️⭐️
+    async function loadAvailableCoupons() {
+      const container = document.getElementById('availableCouponsContainer');
+      const list = document.getElementById('couponButtonList');
+      
+      // [Check 1] (A) ซ่อนปุ่มถ้าเป็น Guest
+      if (userId.startsWith('guest_')) {
+        container.style.display = 'none';
+        return;
+      }
+      
+      // ⭐️ [Check 2 - ใหม่!] ตรวจสอบว่ากดรับโค้ดสมาชิกหรือยัง ⭐️
+      if (currentUserData.hasClaimedMemberCoupon === false) {
+          list.innerHTML = '<span style="font-size: 0.9rem; color: #d93025;">- กรุณากดรับโค้ดสมาชิกในหน้าโปรไฟล์ก่อน -</span>';
+          container.style.display = 'block';
+          return; // หยุดการทำงาน
+      }
+      // ⭐️ [จบส่วนที่เพิ่ม] ⭐️
+
+
+      // [Check 3] (โค้ดเดิม) โหลดคูปอง
+      list.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> กำลังโหลดโค้ด...</span>';
+      container.style.display = 'block'; // 👈 แสดงกล่อง
+
+      try {
+        // (B) ดึงคูปองที่ยังมีสิทธิ์เหลือ
+        const snapshot = await db.collection('coupons')
+                                 .where('quantityAvailable', '>', 0) 
+                                 .get();
+        
+        let availableCoupons = [];
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          // (C) ตรวจสอบอีกชั้นว่ายังไม่เต็ม
+          if ((data.quantityUsed || 0) < data.quantityAvailable) {
+            availableCoupons.push({ id: doc.id, ...data });
+          }
+        });
+
+        if (availableCoupons.length === 0) {
+          list.innerHTML = '<span style="font-size: 0.9rem; color: #999;">- ไม่มีโค้ดส่วนลดในขณะนี้ -</span>';
+          return;
+        }
+
+        // (D) สร้างปุ่ม
+        list.innerHTML = '';
+        availableCoupons.forEach(coupon => {
+          const btn = document.createElement('button');
+          btn.className = 'coupon-btn-item';
+          btn.innerText = `🎁 ${coupon.id}`;
+          
+          let description = '';
+          if (coupon.type === 'fixed') {
+            description = `ส่วนลด ${coupon.value} บาท`;
+          } else if (coupon.type === 'percent') {
+            description = `ส่วนลด ${coupon.value}%`;
+          }
+          btn.title = description; // เพิ่มคำอธิบายเมื่อเอาเมาส์ชี้
+          
+          // (E) เมื่อคลิกปุ่ม ให้กรอกโค้ดและกดใช้ทันที
+          btn.onclick = () => {
+            document.getElementById('couponInput').value = coupon.id;
+            applyCoupon(); // เรียกใช้โค้ดเลย
+          };
+          list.appendChild(btn);
+        });
+
+      } catch (err) {
+        console.error("Error loading available coupons:", err);
+        list.innerHTML = '<span style="font-size: 0.9rem; color: #d93025;">- โหลดโค้ดล้มเหลว -</span>';
+      }
+    }
+    // ⭐️⭐️ [END] 2. จบฟังก์ชัน loadAvailableCoupons ⭐️⭐️
+
+
+    // (ฟังก์ชัน openCart() ... เหมือนเดิม)
     function openCart() {
+      
+      loadAvailableCoupons();
+      
       const c = document.getElementById('cartItemsContainer'); 
       c.innerHTML = cart.length ? '' : '<p>ว่างเปล่า</p>';
       subtotalAmount = 0; 
@@ -1562,7 +1675,6 @@
         subtotalAmount += (x.price * x.qty); 
         const sizeDisplay = (x.size && x.size !== 'One Size') ? ` (ไซส์: ${x.size})` : '';
         
-        // [!!] เพิ่ม <img src="${x.image}" ...> เข้าไป
         c.innerHTML+=`
           <div class="cart-item">
             <img src="${x.image}" class="cart-item-img"> 
@@ -1583,7 +1695,6 @@
           </div>`; 
       });
 
-      // (ส่วนที่เหลือของฟังก์ชันเหมือนเดิม)
       discountApplied = 0;
       const discountDisplay = document.getElementById('discountDisplay');
       if (currentDiscount.code && subtotalAmount > 0) {
@@ -1607,39 +1718,28 @@
       document.getElementById('totalPrice').innerText = '฿' + finalTotalAmount;
       document.getElementById('cartModal').style.display='flex';
     }
-    // ⭐️⭐️ [END] แก้ไขฟังก์ชัน openCart() ⭐️⭐️
     
-    // --- (ฟังก์ชันชำระเงิน - [แก้ไขแล้ว]) ---
+    // (ฟังก์ชัน openPayment() ... เหมือนเดิม)
     function openPayment() { 
       if(!cart.length) return showToast('ไม่มีสินค้าในตะกร้า', true);
       
-      // ⭐️ --- [START] เพิ่มโค้ดตรวจสอบการ Login --- ⭐️
-      // (userId จะมีคำว่า 'guest_' นำหน้า ถ้ายังไม่ได้ Login)
       if (userId.startsWith('guest_')) {
         
-        // 1. เรียกใช้ Modal ยืนยันที่มีอยู่
         document.getElementById('confirmIcon').innerHTML = '👤'; // ไอคอนรูปคน
         document.getElementById('confirmTitle').innerText = 'กรุณาเข้าสู่ระบบ';
         document.getElementById('confirmDesc').innerText = 'คุณต้องเข้าสู่ระบบก่อน จึงจะสามารถสั่งซื้อสินค้าได้';
         
-        // 2. ตั้งค่าปุ่ม "ยืนยัน"
         const btnConfirm = document.getElementById('btnConfirmAction');
         btnConfirm.innerText = 'ไปหน้า Login'; // เปลี่ยนข้อความปุ่ม
         
-        // 3. ตั้งค่า Action ให้ปุ่ม
         btnConfirm.onclick = () => {
           window.location.href = 'index.html'; // สั่งให้ไปหน้า index.html
         };
         
-        // 4. แสดง Modal
         document.getElementById('confirmModal').style.display = 'flex';
         
-        // 5. หยุดการทำงาน ไม่ให้ไปต่อ
         return; 
       }
-      // ⭐️ --- [END] สิ้นสุดโค้ดตรวจสอบ --- ⭐️
-
-      // ถ้า Login แล้ว (โค้ดเดิม)
       document.getElementById('cartModal').style.display='none'; 
       document.getElementById('paymentModal').style.display='flex'; 
     }
@@ -1652,23 +1752,18 @@
     }
     
 
-    // --- (11) JS: ⭐️⭐️ [START] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ (confirmOrder - จำกัด N ครั้งต่อคน) ⭐️⭐️ ---
+    // (ฟังก์ชัน confirmOrder() ... เหมือนเดิม)
     async function confirmOrder() {
       const n=document.getElementById('custName').value, p=document.getElementById('custPhone').value, a=document.getElementById('custAddress').value;
       const pm=document.querySelector('input[name="payment"]:checked').value;
       const bankSelect = document.getElementById('bankSelect');
       const bankName = bankSelect ? bankSelect.value : '';
 
-      // ⭐️ [START] เพิ่มโค้ดส่วนนี้เข้าไป ⭐️
-      // ตรวจสอบว่าถ้าเลือก "bank" (โอนเงิน) ให้เด้งแจ้งเตือนและหยุดทันที
       if (pm === 'bank') {
         showToast('โปรดชำระเงินให้เสร็จสมบูรณ์', true);
-        return; // หยุดการทำงานของฟังก์ชันทันที
+        return; 
       }
-      // ⭐️ [END] สิ้นสุดส่วนที่เพิ่ม ⭐️
-
       if(!n||!p||!a) return showToast('กรุณากรอกข้อมูลให้ครบ', true);
-      // (บรรทัดนี้จะกลายเป็นไม่จำเป็น แต่ทิ้งไว้ก็ได้)
       if (pm === 'bank' && !bankName) return showToast('กรุณาเลือกธนาคาร', true);
       
       if (userId.startsWith('guest_')) {
@@ -1678,7 +1773,6 @@
 
       const btn=document.getElementById('confirmPayBtn'); btn.disabled=true; btn.innerText="กำลังบันทึก...";
       try {
-        // (11.1) JS: ตัดสต็อกสินค้า (ส่วนนี้เหมือนเดิม)
         await Promise.all(cart.map(i => db.runTransaction(async t => {
           const productRef = db.collection('products').doc(i.id);
           const d = await t.get(productRef);
@@ -1703,10 +1797,8 @@
           });
         })));
         
-        // (11.2) JS: [แก้ไข] สร้าง Transaction สำหรับการสร้างออเดอร์ + ตัดสิทธิ์คูปอง
         await db.runTransaction(async t => {
           
-          // --- (A) ตรวจสอบและตัดสิทธิ์คูปอง (ถ้ามี) ---
           if (currentDiscount.code) {
             const couponRef = db.collection('coupons').doc(currentDiscount.code);
             const couponDoc = await t.get(couponRef); 
@@ -1714,38 +1806,31 @@
             if (!couponDoc.exists) throw "โค้ดส่วนลดไม่ถูกต้อง";
             const couponData = couponDoc.data();
 
-            // 1. ตรวจสอบจำนวนรวม (เหมือนเดิม)
             if (couponData.quantityUsed >= couponData.quantityAvailable) {
               throw "ขออภัย โค้ดนี้ถูกใช้เต็มจำนวนแล้ว";
             }
             
-            // 2. [ใหม่] ตรวจสอบโควต้าผู้ใช้ (อีกครั้งใน Transaction)
-            const limitPerUser = couponData.limitPerUser || 1; // 👈 [ใหม่]
+            const limitPerUser = couponData.limitPerUser || 1; 
             const usageRef = couponRef.collection('usersWhoUsed').doc(userId);
-            const usageDoc = await t.get(usageRef); // 👈 [ใหม่]
+            const usageDoc = await t.get(usageRef); 
             
             let currentUserUseCount = 0;
             if (usageDoc.exists) {
               currentUserUseCount = usageDoc.data().useCount || 0;
             }
 
-            if (currentUserUseCount >= limitPerUser) { // 👈 [ใหม่]
+            if (currentUserUseCount >= limitPerUser) { 
               throw "คุณได้ใช้โค้ดส่วนลดนี้ครบตามจำนวนครั้งที่กำหนดแล้ว";
             }
             
-            // [สำเร็จ] ถ้าผ่านทั้งหมด:
-            // 1. ตัดยอดรวม
             t.update(couponRef, { quantityUsed: firebase.firestore.FieldValue.increment(1) });
             
-            // 2. [แก้ไข] บันทึก/อัปเดตยอดผู้ใช้
             if (usageDoc.exists) {
-              // ถ้าเคยใช้แล้ว ให้อัปเดต (บวก 1)
               t.update(usageRef, { 
                 useCount: firebase.firestore.FieldValue.increment(1),
                 lastUsedAt: firebase.firestore.FieldValue.serverTimestamp() 
               });
             } else {
-              // ถ้าใช้ครั้งแรก ให้สร้าง (ตั้งค่าเป็น 1)
               t.set(usageRef, { 
                 useCount: 1, 
                 lastUsedAt: firebase.firestore.FieldValue.serverTimestamp() 
@@ -1753,7 +1838,6 @@
             }
           }
           
-          // --- (B) สร้างออเดอร์ (เหมือนเดิม) ---
           const newOrderRef = db.collection('orders').doc(); 
           t.set(newOrderRef, {
             customer:{name:n,phone:p,address:a}, 
@@ -1768,10 +1852,9 @@
             status:'pending', 
             timestamp:firebase.firestore.FieldValue.serverTimestamp()
           });
-        }); // --- สิ้นสุด Transaction ---
+        }); 
 
         
-        // (11.3) JS: เคลียร์ค่าต่างๆ (ส่วนนี้เหมือนเดิม)
         sendMsgInternal(`[ระบบ] สั่งซื้อสำเร็จ ยอด ฿${finalTotalAmount}`);
         
         cart=[]; 
@@ -1781,7 +1864,6 @@
         updateCart();
         closeModal('paymentModal');
         
-        // ⭐️ [แก้ไข] คืนค่า successModal ก่อนแสดง ⭐️
         document.querySelector('#successModal .confirm-title').innerText = 'สั่งซื้อสำเร็จ!';
         document.querySelector('#successModal .confirm-desc').innerText = 'ขอบคุณที่ใช้บริการ ทางเราจะจัดส่งสินค้าให้เร็วที่สุด';
         document.getElementById('successModal').querySelector('.btn-ok').onclick = () => {
@@ -1796,21 +1878,19 @@
         btn.disabled=false; btn.innerText="ยืนยันการสั่งซื้อ"; 
       }
     }
-    // --- (11) JS: ⭐️⭐️ [END] แก้ไขฟังก์ชันยืนยันคำสั่งซื้อ ⭐️⭐️ ---
 
     // ========== [END] ⭐️⭐️⭐️ ฟังก์ชันที่แก้ไข ⭐️⭐️⭐️ ==========
 
 
     
-    // --- (ฟังก์ชันประวัติการสั่งซื้อ และ Chat) ---
+    // --- (ฟังก์ชันประวัติการสั่งซื้อ และ Chat ... เหมือนเดิม) ---
     
-    // ⭐️⭐️⭐️ [START] แก้ไขฟังก์ชัน openHistory ⭐️⭐️⭐️
+    // (ฟังก์ชัน openHistory() ... เหมือนเดิม)
     async function openHistory() {
       document.getElementById('historyModal').style.display = 'flex';
       const con = document.getElementById('historyContainer');
       con.innerHTML = '<p style="text-align:center;">กำลังโหลด...</p>';
       
-      // [FIX 1] ตรวจสอบว่า Login หรือยัง
       if (userId.startsWith('guest_')) {
            con.innerHTML = '<p style="text-align:center; color:#999;">กรุณาเข้าสู่ระบบเพื่อดูประวัติการสั่งซื้อ</p>';
            return;
@@ -1820,7 +1900,6 @@
       if(s.empty) return con.innerHTML = '<p style="text-align:center; color:#999;">ไม่มีประวัติการสั่งซื้อ</p>';
       
       let ords = []; 
-      // ⭐️ [แก้ไข] เพิ่มการดึง o.id เข้าไปใน array
       s.forEach(d => ords.push({ id: d.id, ...d.data() })); 
       
       ords.sort((a,b)=>(b.timestamp?.seconds||0)-(a.timestamp?.seconds||0));
@@ -1831,11 +1910,9 @@
         o.items.forEach(i => {
           const sizeDisplay = (i.size && i.size !== 'One Size') ? ` (ไซส์: ${i.size})` : '';
           
-          // [FIX 2] แก้ไข Bug: เปลี่ยนจาก i.price*x.qty เป็น i.price*i.qty
           items += `<div class="item-row"><span>${i.name}${sizeDisplay} x${i.qty}</span><span>฿${i.price*i.qty}</span></div>`; 
         });
         
-        // ⭐️ [แก้ไข] เพิ่มการเช็คสถานะ 'cancelled'
         let statusText = 'รอจัดส่ง';
         let statusColor = 'var(--primary)';
         if (o.status === 'completed') {
@@ -1846,10 +1923,8 @@
           statusColor = '#d93025'; // สีแดง
         }
         
-        // ⭐️⭐️ [แก้ไข] เพิ่มปุ่มยกเลิก และ "แก้ไขที่อยู่" ⭐️⭐️
         let orderActionsHtml = '';
         if (o.status === 'pending') {
-          // (ใช้ single quote รอบ onclick และ double quote รอบ string parameter)
           orderActionsHtml = `
             <div class="order-total-actions">
               <button class="btn-edit-order" id="editBtn-${o.id}" onclick='openEditAddressModal("${o.id}", ${JSON.stringify(o.customer)})'>
@@ -1861,7 +1936,6 @@
             </div>`;
         }
         
-        // ⭐️ [แก้ไข] เพิ่มตัวแปร statusText, statusColor, และ orderActionsHtml
         con.innerHTML += `
           <div class="order-card">
             <div class="order-header">
@@ -1876,12 +1950,9 @@
           </div>`;
       });
     }
-    // ⭐️⭐️⭐️ [END] แก้ไขฟังก์ชัน openHistory ⭐️⭐️⭐️
     
-    
-    // ⭐️⭐️⭐️ [START] เพิ่มฟังก์ชัน cancelOrder ⭐️⭐️⭐️
+    // (ฟังก์ชัน cancelOrder() ... เหมือนเดิม)
     async function cancelOrder(orderId, items) {
-      // 1. ถามยืนยัน
       document.getElementById('confirmIcon').innerHTML = '🗑️';
       document.getElementById('confirmTitle').innerText = 'ยืนยันการยกเลิก?';
       document.getElementById('confirmDesc').innerText = 'คุณต้องการยกเลิกออเดอร์นี้ใช่หรือไม่? สต็อกสินค้าจะถูกคืนเข้าระบบ';
@@ -1897,14 +1968,11 @@
         }
         
         try {
-          // 2. คืนสต็อกสินค้า (Transaction)
-          // ใช้ Promise.all เพื่อรอให้การคืนสต็อกทุกชิ้นเสร็จสิ้น
           await Promise.all(items.map(item => db.runTransaction(async t => {
             const productRef = db.collection('products').doc(item.id);
             const doc = await t.get(productRef);
             
             if (!doc.exists) {
-              // ถ้าสินค้าถูกลบไปแล้ว ก็แค่ข้ามไป
               console.warn(`Product ${item.id} not found, skipping stock return.`);
               return; 
             }
@@ -1913,10 +1981,8 @@
             const newSizeStockMap = data.sizeStock;
             const oldSizeStock = newSizeStockMap[item.size] || 0;
             
-            // คืนสต็อก
             newSizeStockMap[item.size] = oldSizeStock + item.qty;
             const newTotalStock = data.totalStock + item.qty;
-            // ลด 'ยอดขาย' (sold)
             const newSold = Math.max(0, (data.sold || 0) - item.qty); 
             
             t.update(productRef, {
@@ -1926,14 +1992,11 @@
             });
           })));
 
-          // 3. อัปเดตสถานะออเดอร์เป็น 'cancelled'
           await db.collection('orders').doc(orderId).update({
             status: 'cancelled'
           });
 
           showToast('ยกเลิกออเดอร์เรียบร้อย');
-          
-          // 4. รีเฟรชประวัติการสั่งซื้อเพื่อแสดงผลลัพธ์
           openHistory(); 
           
         } catch (e) {
@@ -1946,39 +2009,34 @@
         }
       };
       
-      // 5. แสดง Modal ยืนยัน
       document.getElementById('confirmModal').style.display = 'flex';
     }
-    // ⭐️⭐️⭐️ [END] เพิ่มฟังก์ชัน cancelOrder ⭐️⭐️⭐️
     
-    
+    // (ฟังก์ชัน openEditAddressModal() ... เหมือนเดิม)
     function openEditAddressModal(orderId, customer) {
-      if (!customer) return; // ป้องกัน error
+      if (!customer) return; 
       
-      currentEditingOrderId = orderId; // 1. เก็บ ID ออเดอร์ไว้ในตัวแปร global
+      currentEditingOrderId = orderId; 
       
-      // 2. เติมข้อมูลเดิมลงในช่อง input
       document.getElementById('editCustName').value = customer.name || '';
       document.getElementById('editCustPhone').value = customer.phone || '';
       document.getElementById('editCustAddress').value = customer.address || '';
       
-      // 3. แสดงหน้าต่าง Modal
       document.getElementById('editAddressModal').style.display = 'flex';
     }
     
+    // (ฟังก์ชัน saveAddress() ... เหมือนเดิม)
     async function saveAddress() {
-      if (!currentEditingOrderId) return; // ตรวจสอบว่ามี ID ออเดอร์ที่จะแก้หรือไม่
+      if (!currentEditingOrderId) return; 
       
       const btn = document.getElementById('saveAddressBtn');
       btn.disabled = true;
       btn.innerText = "กำลังบันทึก...";
 
-      // 1. ดึงข้อมูลใหม่จาก input
       const newName = document.getElementById('editCustName').value.trim();
       const newPhone = document.getElementById('editCustPhone').value.trim();
       const newAddress = document.getElementById('editCustAddress').value.trim();
 
-      // 2. ตรวจสอบว่ากรอกครบ
       if (!newName || !newPhone || !newAddress) {
         showToast('กรุณากรอกข้อมูลให้ครบ', true);
         btn.disabled = false;
@@ -1986,7 +2044,6 @@
         return;
       }
       
-      // 3. สร้าง object ที่อยู่ใหม่
       const newCustomerData = {
         name: newName,
         phone: newPhone,
@@ -1994,15 +2051,14 @@
       };
 
       try {
-        // 4. อัปเดตข้อมูลใน Firestore
         await db.collection('orders').doc(currentEditingOrderId).update({
           customer: newCustomerData
         });
         
         showToast('อัปเดตที่อยู่เรียบร้อย');
         closeModal('editAddressModal');
-        currentEditingOrderId = null; // 5. เคลียร์ ID
-        openHistory(); // 6. รีเฟรชหน้าประวัติ
+        currentEditingOrderId = null; 
+        openHistory(); 
         
       } catch (e) {
         console.error("Error updating address: ", e);
@@ -2012,6 +2068,8 @@
         btn.innerText = "บันทึกการเปลี่ยนแปลง";
       }
     }
+    
+    // (ฟังก์ชัน Chat ทั้งหมด ... เหมือนเดิม)
     function toggleChat() { const w=document.getElementById('chatWindow'); w.style.display=w.style.display==='none'?'flex':'none'; if(w.style.display==='flex') scrollToBottom(); }
     function scrollToBottom() { const b=document.getElementById('chatBody'); b.scrollTop=b.scrollHeight; }
     function handleEnter(e) { if(e.key==='Enter') sendMsg(); }
@@ -2022,44 +2080,34 @@
       sendMsgInternal(txt);
     }
     
-    // 🔥 --- [START] แก้ไขฟังก์ชัน sendMsgInternal --- 🔥
     function sendMsgInternal(text) {
       
-      // 🔥 [NEW] 1. รีเซ็ต Timer 30 นาที (ลบของเก่าทิ้ง)
       if (inactivityTimer) {
         clearTimeout(inactivityTimer);
       }
       
-      // (1) ส่งข้อความไปที่ messages sub-collection
       db.collection('chats').doc(userId).collection('messages').add({ 
         text: text, 
         sender: 'user', 
         timestamp: firebase.firestore.FieldValue.serverTimestamp() 
       });
       
-      // (2) 🔥 อัปเดตข้อมูลล่าสุดของแชท (เพิ่ม displayName และ photoURL)
       db.collection('chats').doc(userId).set({
         lastMessage: text,
         lastActive: firebase.firestore.FieldValue.serverTimestamp(),
         userId: userId,
-        // ใช้ข้อมูลจาก currentUserData ที่โหลดมาตอน login
         email: currentUserData.email || (document.getElementById('custName').value || 'Guest'),
         displayName: currentUserData.displayName || (document.getElementById('custName').value || 'Guest'),
         photoURL: currentUserData.photoURL || null
-      }, { merge: true }); // ใช้ merge: true เพื่อไม่ให้ลบสถานะ isBlocked (ถ้ามี)
+      }, { merge: true }); 
       
-      // (3) เรียก Auto-reply
       setTimeout(() => autoReply(text), 1000);
       
-      // 🔥 [NEW] 2. เริ่ม Timer 30 นาทีใหม่
       inactivityTimer = setTimeout(() => {
-        // ฟังก์ชันที่จะทำงานเมื่อครบ 30 นาที
         sendInactivityMessage();
       }, INACTIVITY_TIMEOUT_MS);
     }
-    // 🔥 --- [END] แก้ไขฟังก์ชัน sendMsgInternal --- 🔥
 
-    // 🔥 --- [NEW] ฟังก์ชันสำหรับส่งข้อความเมื่อรอนาน --- 🔥
     function sendInactivityMessage() {
       const followUpMsg = {
         text: "ขออภัยที่ให้รอนานครับ ขณะนี้แอดมินอาจติดลูกค้าท่านอื่นอยู่ จะรีบมาตอบกลับโดยเร็วที่สุดครับ 🙏",
@@ -2067,39 +2115,29 @@
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
       };
       
-      // ส่งข้อความติดตามผล
       db.collection('chats').doc(userId).collection('messages').add(followUpMsg);
       
-      // อัปเดต lastActive (เพื่อให้แชทเด้งไปข้างบนฝั่งแอดมิน)
       db.collection('chats').doc(userId).set({ 
           lastActive: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
       
-      // เคลียร์ Timer (เราจะส่งแค่ครั้งเดียว)
       inactivityTimer = null;
     }
-    // 🔥 --- [END] ฟังก์ชันใหม่ --- 🔥
 
 
-    // (ใหม่!) ฟังก์ชันสำหรับจัดการการคลิกปุ่มตัวเลือก
     function handleOptionClick(optionText, messageId) {
-      // 1. ส่งข้อความตัวเลือกนั้นเป็นข้อความของผู้ใช้
-      // (ฟังก์ชัน sendMsgInternal จะไปเรียก autoReply ให้อัตโนมัติ)
       sendMsgInternal(optionText);
 
-      // 2. ปิดการใช้งานปุ่ม (เปลี่ยนปุ่มเป็นข้อความ "เลือกแล้ว")
       const optionsContainer = document.getElementById(`options-${messageId}`);
       if (optionsContainer) {
         optionsContainer.innerHTML = `<div class="option-btn-selected">(เลือก: ${optionText})</div>`;
       }
     }
 
-    // 🔥 --- [START] แก้ไขฟังก์ชัน autoReply (เพิ่ม Logic 20 นาที) --- 🔥
     async function autoReply(t) {
       
-      // 1. ตรวจสอบสถานะแชท
       let welcomeHasBeenSent = false;
-      let welcomeSentTime = null; // 👈 [NEW] เพิ่มตัวแปรเก็บเวลา
+      let welcomeSentTime = null; 
       let chatData = {};
 
       try {
@@ -2107,37 +2145,31 @@
         if (chatDoc.exists) {
           chatData = chatDoc.data(); 
           welcomeHasBeenSent = chatData.welcomeSent === true;
-          welcomeSentTime = chatData.welcomeSentTime || null; // 👈 [NEW] ดึงเวลาที่บอทตอบล่าสุด
+          welcomeSentTime = chatData.welcomeSentTime || null; 
         }
       } catch (e) {
         console.error("Error checking welcome flags:", e);
-        welcomeHasBeenSent = true; // กันพลาด (จะไม่ส่ง welcome)
+        welcomeHasBeenSent = true; 
       }
 
       let r=''; t=t.toLowerCase();
 
-      // 2. 👈 [NEW] ตรรกะใหม่ในการตัดสินใจส่งข้อความต้อนรับ
       let shouldSendWelcome = false;
       if (!welcomeHasBeenSent) {
-        // (A) ยังไม่เคยส่งเลย (welcomeSent: false)
         shouldSendWelcome = true;
       } else if (welcomeSentTime) {
-        // (B) เคยส่งแล้ว แต่เช็คว่าบอทตอบล่าสุดนานหรือยัง
         const now = new Date();
         const lastBotReplyTime = welcomeSentTime.toDate();
         const diffMs = now - lastBotReplyTime;
-        const diffMins = diffMs / (1000 * 60); // แปลงเป็นนาที
+        const diffMins = diffMs / (1000 * 60); 
 
-        if (diffMins > 20) { // 👈 ถ้าบอทไม่ได้ตอบอะไรเลยเกิน 20 นาที
-          shouldSendWelcome = true; // ให้ส่ง Welcome ใหม่
+        if (diffMins > 20) { 
+          shouldSendWelcome = true; 
         }
       } else {
-        // (C) กรณีข้อมูลเก่า (welcomeSent: true แต่ไม่มี welcomeSentTime)
-        // ให้ส่งไปเลยเพื่อเป็นการเริ่มต้นใหม่
         shouldSendWelcome = true;
       }
       
-      // 3. 👈 [MODIFIED] ถ้าตัดสินใจว่า "ควรส่ง"
       if (shouldSendWelcome) {
         const welcomeMsg = {
           sender: 'admin',
@@ -2147,70 +2179,56 @@
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // ส่งข้อความแบบพิเศษ (ที่มีปุ่ม)
         db.collection('chats').doc(userId).collection('messages').add(welcomeMsg);
         
-        // 4. "ตั้งธง" (set flag) และ "ตั้งเวลา" (อัปเดตเวลาที่บอทตอบ)
         db.collection('chats').doc(userId).set({ 
             lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-            welcomeSent: true, // 👈 ตั้งธง
-            welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() // 👈 [NEW] บันทึกเวลา
+            welcomeSent: true, 
+            welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() 
         }, { merge: true });
         
-        return; // ออกจากฟังก์ชัน
+        return; 
       }
 
-      // 5. (เหมือนเดิม) ถ้า "ไม่ควรส่ง" (แปลว่าอยู่ในบทสนทนา) ให้เช็ค keyword
       if(t.includes('ราคาสินค้า')) r='ราคาสินค้าตามป้ายสินค้าเลยครับ';
       if(t.includes('จัดส่งวันไหน')) r='สินค้าจัดส่งทุกวันไม่มีวันหยุดครับ'; 
       if(t.includes('สถานะจัดส่ง')) r='คุณสามารถตรวจสอบสถานะได้ที่เมนู "ประวัติการสั่งซื้อ" ครับ';
       if(t.includes('เรื่องอื่นๆ')) r='กำลังเรียกแอดมินให้สักครู่นะครับ กรุณาพิมพ์คำถามทิ้งไว้ได้เลยครับ';
 
-      // 6. (เหมือนเดิม) ถ้ามีคำตอบ (r) ให้ส่งกลับไป
       if(r) {
          db.collection('chats').doc(userId).collection('messages').add({text:r, sender:'admin', timestamp:firebase.firestore.FieldValue.serverTimestamp()});
          
-         // 7. 👈 [NEW] อัปเดตเวลาล่าสุดที่บอทตอบกลับด้วย
-         // เพื่อให้ timer 20 นาที เริ่มนับใหม่จากข้อความนี้
          db.collection('chats').doc(userId).set({ 
              lastActive: firebase.firestore.FieldValue.serverTimestamp(),
-             welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() // 👈 [NEW] อัปเดตเวลา
+             welcomeSentTime: firebase.firestore.FieldValue.serverTimestamp() 
          }, { merge: true });
       }
     }
-    // 🔥 --- [END] แก้ไขฟังก์ชัน autoReply --- 🔥
-
     
-    // 🔥 --- [NEW] ฟังก์ชันดักฟังสถานะบล็อค --- 🔥
-    // ฟังก์ชันนี้จะคอยฟังการเปลี่ยนแปลงที่เอกสาร 'chats/{userId}'
     function listenToChatStatus() {
-      if (!userId) return; // ถ้ายังไม่มี userId ก็ไม่ต้องทำอะไร
+      if (!userId) return; 
 
       db.collection('chats').doc(userId).onSnapshot(doc => {
         const msgInput = document.getElementById('msgInput');
-        const sendBtn = document.querySelector('.chat-input-area button'); // หาปุ่มส่ง
+        const sendBtn = document.querySelector('.chat-input-area button'); 
 
         if (doc.exists) {
           const chatData = doc.data();
-          const isBlocked = chatData.isBlocked || false; // ดึงค่า isBlocked (ถ้าไม่มีให้เป็น false)
+          const isBlocked = chatData.isBlocked || false; 
 
           if (isBlocked) {
-            // ถ้าถูกบล็อค
             msgInput.disabled = true;
             msgInput.placeholder = "❌ คุณถูกจำกัดการส่งข้อความ";
             if (sendBtn) sendBtn.disabled = true;
             
-            // 🔥 [NEW] ถ้าถูกบล็อค ให้ยกเลิก Timer 30 นาทีด้วย
             if (inactivityTimer) clearTimeout(inactivityTimer);
             
           } else {
-            // ถ้าไม่ถูกบล็อค (หรือถูกปลดบล็อค)
             msgInput.disabled = false;
             msgInput.placeholder = "พิมพ์ข้อความ...";
             if (sendBtn) sendBtn.disabled = false;
           }
         } else {
-          // ถ้าเอกสารยังไม่ถูกสร้าง (เช่น ยังไม่เคยแชท) ก็ให้พิมพ์ได้ตามปกติ
           msgInput.disabled = false;
           msgInput.placeholder = "พิมพ์ข้อความ...";
           if (sendBtn) sendBtn.disabled = false;
@@ -2218,35 +2236,29 @@
       });
     }
     
-    // 🔥 --- [START] แก้ไขฟังก์ชัน listenToChat --- 🔥
     function listenToChat() {
       db.collection('chats').doc(userId).collection('messages').orderBy('timestamp').onSnapshot(s => {
         const b=document.getElementById('chatBody'); b.innerHTML='<div class="msg msg-admin">สวัสดีครับ!</div>';
         
-        let hasAdminReply = false; // (1) ตัวแปรเช็กว่าแอดมินตอบหรือยัง
+        let hasAdminReply = false; 
         
         s.forEach(d=> {
           const data = d.data();
-          const msgId = d.id; // 👈 (ใหม่) ดึง ID ของข้อความ
+          const msgId = d.id; 
           let optionsHtml = '';
           
-          // (2) ถ้าเจอข้อความจาก 'admin' (ที่ไม่ใช่ข้อความต้อนรับแรกสุด)
-          if (data.sender === 'admin' && data.text !== 'สวัสดีครับ!') {
+          if (data.sender === 'admin' && data.text !== 'สวัสดีครับ') {
             hasAdminReply = true;
           }
 
-          // (ใหม่) ตรวจสอบว่าข้อความนี้มี "ปุ่มตัวเลือก" หรือไม่
           if (data.type === 'options' && data.options && data.options.length > 0) {
-            // (ใหม่) สร้าง HTML สำหรับปุ่ม
-            optionsHtml = `<div class="msg-options" id="options-${msgId}">`; // 👈 (ใหม่) ใส่ ID ให้ container
+            optionsHtml = `<div class="msg-options" id="options-${msgId}">`; 
             data.options.forEach(opt => {
-              // (ใหม่) เพิ่ม onclick ให้ปุ่ม
               optionsHtml += `<button class="option-btn" onclick="handleOptionClick('${opt}', '${msgId}')">${opt}</button>`;
             });
             optionsHtml += `</div>`;
           }
 
-          // (ใหม่) ประกอบร่าง HTML ของข้อความ (เพิ่ม optionsHtml เข้าไป)
           b.innerHTML+=`
             <div class="msg ${data.sender==='user'?'msg-user':'msg-admin'}">
               ${data.text}
@@ -2254,17 +2266,15 @@
             </div>`;
         });
         
-        // (3) ถ้าแอดมินตอบกลับมาแล้ว ให้ยกเลิก Timer
         if (hasAdminReply && inactivityTimer) {
             console.log("Admin replied, cancelling 30-min timer.");
             clearTimeout(inactivityTimer);
-            inactivityTimer = null; // เคลียร์สถานะ
+            inactivityTimer = null; 
         }
         
         scrollToBottom();
       });
     }
-    // 🔥 --- [END] แก้ไขฟังก์ชัน listenToChat --- 🔥
 
     function closeModal(id){document.getElementById(id).style.display='none';}
     function showToast(text, isError = false){
