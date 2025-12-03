@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Fasion - Shop</title>
+  <title>Fashion - Shop</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@300;400;500;600&display=swap" rel="stylesheet">
   
@@ -569,7 +569,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
-    const storage = firebase.storage(); // 👈 [2] สร้างตัวแปร storage
+    const storage = firebase.storage(); // 👈 (ยังคงเหลือไว้ เผื่อฟังก์ชันอื่นใช้)
 
     // --- ⛔ ป้องกันการคัดลอก (เหมือนเดิม) ⛔ ---
     document.addEventListener('contextmenu', (e) => { e.preventDefault(); });
@@ -617,6 +617,75 @@
     // const INACTIVITY_TIMEOUT_MS = 10000; 
     // 🔥 --- [END] เพิ่มตัวแปร --- 🔥
 
+
+    // ⭐️⭐️⭐️ [START] โค้ดใหม่ที่เพิ่มเข้ามา (บีบอัด + แปลง Base64) ⭐️⭐️⭐️
+    
+    /**
+     * ฟังก์ชันสำหรับย่อ/บีบอัดรูปภาพ
+     * @param {File} file - ไฟล์รูปภาพต้นฉบับ
+     * @param {number} maxWidth - ความกว้างสูงสุด
+     * @param {number} maxHeight - ความสูงสูงสุด
+     * @param {number} quality - คุณภาพ (0.0 - 1.0)
+     * @returns {Promise<Blob>} - Promise ที่จะ resolve เป็น Blob ของรูปที่ถูกบีบอัดแล้ว
+     */
+    function resizeImage(file, maxWidth, maxHeight, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // 1. คำนวณขนาดใหม่ (คงอัตราส่วน)
+            if (width > height) {
+              if (width > maxWidth) {
+                height = Math.round(height * (maxWidth / width));
+                width = maxWidth;
+              }
+            } else {
+              if (height > maxHeight) {
+                width = Math.round(width * (maxHeight / height));
+                height = maxHeight;
+              }
+            }
+            
+            // 2. สร้าง Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // 3. วาดรูปลงบน Canvas
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // 4. แปลง Canvas เป็น Blob (ไฟล์รูปใหม่)
+            canvas.toBlob((blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Canvas to Blob conversion failed.'));
+              }
+            }, 'image/jpeg', quality); // บังคับเป็น JPEG เพื่อบีบอัด
+          };
+          img.onerror = reject;
+          img.src = e.target.result; // โหลดรูปเข้า <image>
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file); // อ่านไฟล์
+      });
+    }
+
+    function blobToBase64(blob) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    }
+    // ⭐️⭐️⭐️ [END] โค้ดใหม่ ⭐️⭐️⭐️
+    
 
     window.onload = async () => {
     
@@ -731,21 +800,37 @@
     
     // --- ฟังก์ชันโปรไฟล์ (เหมือนเดิม) ---
     // (ย้าย let currentUserData = {}; ไปเป็น Global)
+    
+    // ⭐️⭐️⭐️ [START] แก้ไขฟังก์ชัน loadUserProfile (กัน undefined) ⭐️⭐️⭐️
     async function loadUserProfile(user) {
+      
+      // (1) ⭐️ [FIX] สร้างข้อมูลพื้นฐานจาก Auth object (user) ก่อน
+      // นี่ยืนยันว่า email จะถูกดึงมาจากระบบ Login โดยตรง
+      currentUserData = {
+        email: user.email, 
+        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'New User'),
+        photoURL: user.photoURL || 'https://via.placeholder.com/150?text=User',
+        hasClaimedMemberCoupon: false // ค่าเริ่มต้น
+      };
+
+      // (2) ⭐️ [FIX] พยายามดึงข้อมูลที่เคยบันทึกไว้ใน Firestore
       const doc = await db.collection('users').doc(user.uid).get();
+      
       if (doc.exists) { 
-          currentUserData = doc.data(); 
+          // (3) ⭐️ [FIX] ถ้ามีข้อมูล ให้นำมา "ทับ" ข้อมูลพื้นฐาน
+          // (เฉพาะส่วนที่เราอนุญาตให้เปลี่ยน เช่น displayName, photoURL)
+          const firestoreData = doc.data();
+          currentUserData.displayName = firestoreData.displayName || currentUserData.displayName;
+          currentUserData.photoURL = firestoreData.photoURL || currentUserData.photoURL;
+          currentUserData.hasClaimedMemberCoupon = firestoreData.hasClaimedMemberCoupon || false;
       } 
-      else {
-        currentUserData = {
-          displayName: user.displayName || user.email.split('@')[0],
-          photoURL: user.photoURL || 'https://via.placeholder.com/150?text=User',
-          email: user.email,
-          hasClaimedMemberCoupon: false // ⭐️ [ใหม่] เพิ่มค่าเริ่มต้น
-        };
-      }
+      
+      // (4) ไม่จำเป็นต้องมี 'else' เพราะเราสร้างข้อมูลพื้นฐานไว้แล้ว
+      
       updateProfileUI();
     }
+    // ⭐️⭐️⭐️ [END] แก้ไขฟังก์ชัน loadUserProfile ⭐️⭐️⭐️
+    
     function updateProfileUI() {
       document.getElementById('headerName').innerText = currentUserData.displayName;
       document.getElementById('headerAvatar').src = currentUserData.photoURL;
@@ -775,29 +860,57 @@
       document.getElementById('profileModal').style.display = 'flex'; 
     }
     
-    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน previewImage ⭐️⭐️
-    function previewImage(event) {
+
+    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน previewImage (บีบอัดรูป) ⭐️⭐️
+    async function previewImage(event) {
       const file = event.target.files[0];
-      if (file) {
+      if (!file) return;
+      
+      const preview = document.getElementById('editAvatarPreview');
+
+      // (1) แสดงตัวอย่างว่ากำลังโหลด (เผื่อรูปใหญ่)
+      preview.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' stroke='%23ddd' stroke-width='10' fill='none'/%3E%3Ccircle cx='50' cy='50' r='40' stroke='%237A56D3' stroke-width='10' fill='none' stroke-dasharray='250' stroke-dashoffset='0'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='502' dur='2s' repeatCount='indefinite'/%3E%3C/circle%3E%3C/svg%3E";
+
+      try {
+        // --- ⚙️ (คุณสามารถปรับค่าตรงนี้ได้) ⚙️ ---
+        const MAX_WIDTH = 800;  // 👈 ความกว้างสูงสุด 800px
+        const MAX_HEIGHT = 800; // 👈 ความสูงสูงสุด 800px
+        const QUALITY = 0.7;    // 👈 คุณภาพ 70%
+        // ------------------------------------
+
+        // (2) เรียกใช้ฟังก์ชันบีบอัดรูป
+        const resizedBlob = await resizeImage(file, MAX_WIDTH, MAX_HEIGHT, QUALITY);
+
+        // (3) ตั้งชื่อไฟล์ใหม่ (สำคัญมาก!)
+        // ตั้งชื่อใหม่เป็น .jpg เพราะเราบังคับบีบอัดเป็น jpeg
+        const originalName = file.name.split('.').slice(0, -1).join('.');
+        resizedBlob.name = `${originalName}_${Date.now()}.jpg`;
+
+        // (4) เก็บ "ไฟล์ที่บีบอัดแล้ว" ไว้ในตัวแปร
+        currentAvatarFile = resizedBlob; 
         
-        // 👈 [4] เก็บ "ไฟล์" ไว้ในตัวแปร
-        currentAvatarFile = file; 
-        
-        // (ส่วนนี้เหมือนเดิม: แค่สร้างตัวอย่าง Base64)
-        const reader = new FileReader();
-        reader.onload = function(e) { document.getElementById('editAvatarPreview').src = e.target.result; };
-        reader.readAsDataURL(file);
+        // (5) แสดงตัวอย่าง (จาก Blob ที่บีบอัดแล้ว)
+        preview.src = URL.createObjectURL(resizedBlob);
+
+      } catch (err) {
+        console.error("Error resizing image:", err);
+        showToast("ไม่สามารถบีบอัดรูปได้", true);
+        preview.src = currentUserData.photoURL; // คืนค่าเป็นรูปเดิม
+        currentAvatarFile = null;
       }
     }
     // ⭐️⭐️ [END] แก้ไขฟังก์ชัน previewImage ⭐️⭐️
     
-    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน saveProfile ⭐️⭐️
+
+    // ⭐️⭐️ [START] แก้ไขฟังก์ชัน saveProfile (เวอร์ชันไม่ใช้ Storage) ⭐️⭐️
     async function saveProfile() {
       const btn = document.getElementById('saveProfileBtn');
       btn.disabled = true;
       
       const newName = document.getElementById('editName').value.trim();
-      let newImgSrc = document.getElementById('editAvatarPreview').src; // 👈 (1) เอา URL/Base64 ปัจจุบันมา
+      
+      // 👈 (1) เอา URL/Base64 ปัจจุบันจาก "ตัวอย่าง" มา
+      let newImgSrc = document.getElementById('editAvatarPreview').src; 
       
       if(!newName) {
         showToast('กรุณากรอกชื่อ', true);
@@ -806,37 +919,29 @@
       }
 
       try {
-        // (2) ตรวจสอบว่ามีการเลือก "ไฟล์ใหม่" หรือไม่ (จากตัวแปรที่เราเก็บไว้)
+        // (2) ⭐️ [แก้ไข] ตรวจสอบว่ามีการเลือก "ไฟล์ใหม่" (ที่เป็น Blob) หรือไม่
         if (currentAvatarFile) {
-          btn.innerText = "กำลังอัปโหลดรูป...";
+          btn.innerText = "กำลังแปลงรูป...";
           
-          // (3) สร้าง "ที่อยู่" ใน Storage (เช่น avatars/USER_ID/filename.jpg)
-          const filePath = `avatars/${userId}/${currentAvatarFile.name}`;
-          const fileRef = storage.ref().child(filePath);
+          // (3) ⭐️ [แก้ไข] แปลง Blob (ไฟล์ที่บีบอัดแล้ว) เป็น Base64
+          newImgSrc = await blobToBase64(currentAvatarFile);
           
-          // (4) สั่งอัปโหลด "ไฟล์"
-          await fileRef.put(currentAvatarFile);
-          
-          // (5) ถ้าอัปโหลดสำเร็จ ให้ไปเอา "ลิงก์" (Download URL)
-          newImgSrc = await fileRef.getDownloadURL();
-          
-          currentAvatarFile = null; // 👈 เคลียร์ไฟล์หลังจากอัปโหลดสำเร็จ
+          currentAvatarFile = null; // 👈 เคลียร์ไฟล์หลังจากแปลงสำเร็จ
         }
 
-        // (6) บันทึกข้อมูลลง Firestore (ไม่ว่าจะเป็นลิงก์ใหม่ หรือ ลิงก์เดิม)
+        // (4) ⭐️ [แก้ไข] บันทึกข้อมูลลง Firestore (ตอนนี้ newImgSrc คือ Base64)
         btn.innerText = "กำลังบันทึก...";
         
-        // [แก้ไข] รวมข้อมูลเดิม (เช่น hasClaimedMemberCoupon) เข้าไปด้วย
         const dataToSave = {
-          ...currentUserData, // 👈 เอาข้อมูลเดิมมาก่อน
+          ...currentUserData, 
           displayName: newName,
-          photoURL: newImgSrc, 
+          photoURL: newImgSrc, // 👈 บันทึก Base64 string ลงไป
           email: currentUserData.email
         };
         
-        await db.collection('users').doc(userId).set(dataToSave, { merge: true }); // 👈 ใช้ merge
+        await db.collection('users').doc(userId).set(dataToSave, { merge: true });
 
-        // (7) อัปเดต UI (เหมือนเดิม)
+        // (5) อัปเดต UI (เหมือนเดิม)
         currentUserData.displayName = newName;
         currentUserData.photoURL = newImgSrc;
         updateProfileUI();
@@ -845,7 +950,12 @@
         
       } catch(e) { 
         console.error(e); 
-        showToast('บันทึกไม่สำเร็จ: ' + e.message, true); 
+        // ⭐️ [แก้ไข] เพิ่มการตรวจสอบ Error (อาจเกิดจาก Base64 ใหญ่เกิน 1MB)
+        if (e.message && e.message.includes("exceeds the maximum size")) {
+            showToast('บันทึกไม่สำเร็จ: รูปภาพมีขนาดใหญ่เกินไป!', true);
+        } else {
+            showToast('บันทึกไม่สำเร็จ: ' + e.message, true);
+        }
       } finally { 
         btn.disabled = false;
         btn.innerText = "บันทึกการเปลี่ยนแปลง";
@@ -1549,7 +1659,16 @@
       const bankSelect = document.getElementById('bankSelect');
       const bankName = bankSelect ? bankSelect.value : '';
 
+      // ⭐️ [START] เพิ่มโค้ดส่วนนี้เข้าไป ⭐️
+      // ตรวจสอบว่าถ้าเลือก "bank" (โอนเงิน) ให้เด้งแจ้งเตือนและหยุดทันที
+      if (pm === 'bank') {
+        showToast('โปรดชำระเงินให้เสร็จสมบูรณ์', true);
+        return; // หยุดการทำงานของฟังก์ชันทันที
+      }
+      // ⭐️ [END] สิ้นสุดส่วนที่เพิ่ม ⭐️
+
       if(!n||!p||!a) return showToast('กรุณากรอกข้อมูลให้ครบ', true);
+      // (บรรทัดนี้จะกลายเป็นไม่จำเป็น แต่ทิ้งไว้ก็ได้)
       if (pm === 'bank' && !bankName) return showToast('กรุณาเลือกธนาคาร', true);
       
       if (userId.startsWith('guest_')) {
